@@ -48,10 +48,9 @@ export function Board({ players, currentPlayerId }: BoardProps) {
 
   // Calculate elliptical positions for 12 tiles
   const getTilePosition = (index: number) => {
-    // Ellipse with center at (50%, 50%), radiusX ~42%, radiusY ~38%
     const angle = (index / 12) * 2 * Math.PI - Math.PI / 2 // Start from top
-    const radiusX = 34
-    const radiusY = 28
+    const radiusX = 38
+    const radiusY = 32
     const x = 50 + radiusX * Math.cos(angle)
     const y = 50 + radiusY * Math.sin(angle)
     return { x, y }
@@ -99,8 +98,8 @@ export function Board({ players, currentPlayerId }: BoardProps) {
         <ellipse
           cx="50"
           cy="50"
-          rx="34"
-          ry="28"
+          rx="38"
+          ry="32"
           fill="none"
           stroke="url(#pathGradient)"
           strokeWidth="0.8"
@@ -134,9 +133,9 @@ export function Board({ players, currentPlayerId }: BoardProps) {
             style={{
               left: `${pos.x}%`,
               top: `${pos.y}%`,
-              width: "24%",
-              minWidth: "120px",
-              maxWidth: "180px",
+              width: "16%",
+              minWidth: "80px",
+              maxWidth: "120px",
             }}
           >
             {/* Tile card */}
@@ -145,21 +144,21 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                 relative rounded-xl border-2 ${colors.border}
                 bg-gradient-to-br ${colors.bg}
                 backdrop-blur-sm
-                p-3
+                p-2
                 shadow-lg
                 ${isCurrentPlayerHere ? "ring-2 ring-accent ring-offset-2 ring-offset-transparent animate-pulse-glow" : ""}
               `}
             >
               {/* Tile number badge */}
-              <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-black/70 flex items-center justify-center text-xs font-bold text-white border border-white/30">
+              <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-black/70 flex items-center justify-center text-xs font-bold text-white border border-white/30">
                 {index}
               </div>
 
               {/* Tile icon */}
-              <div className="text-center text-3xl mb-2">{colors.icon}</div>
+              <div className="text-center text-xl mb-1">{colors.icon}</div>
 
               {/* Tile name */}
-              <div className="text-xs font-bold text-white text-center leading-tight line-clamp-2 min-h-[32px]">
+              <div className="text-xs font-bold text-white text-center leading-tight line-clamp-2 min-h-[28px]">
                 {tile.name}
               </div>
 
