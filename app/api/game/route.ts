@@ -25,6 +25,10 @@ export async function POST(request: NextRequest) {
         currentQuestionIndex: 0,
         answered: false,
         selectedAnswer: null,
+        currentTileId: 0,
+        lapsCompleted: 0,
+        skippedNextQuestion: false,
+        nextRolledMax: null,
       }
       addPlayer(newPlayer)
       return NextResponse.json({

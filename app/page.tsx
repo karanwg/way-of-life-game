@@ -4,15 +4,19 @@ import { useState, useCallback } from "react"
 import { NameEntry } from "@/components/name-entry"
 import { QuizScreen } from "@/components/quiz-screen"
 import { Leaderboard } from "@/components/leaderboard"
+import { Board } from "@/components/board"
+import { EventCard, type EventCardData } from "@/components/event-card"
+import { GameOver } from "@/components/game-over"
 import { useGameStream } from "@/hooks/use-game-stream"
 import type { Player, GameEvent } from "@/lib/types"
+import { QUESTIONS } from "@/lib/questions"
 
 export default function Home() {
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
+  const [eventCard, setEventCard] = useState<EventCardData | null>(null)
 
-  // Subscribe to real-time game events
   const handleGameEvent = useCallback((event: GameEvent) => {
     if (event.type === "GAME_STATE_UPDATE") {
       setAllPlayers(event.players.sort((a, b) => b.coins - a.coins))
@@ -20,6 +24,14 @@ export default function Home() {
       setPlayerId(null)
       setCurrentPlayer(null)
       setAllPlayers([])
+      setEventCard(null)
+    } else if (event.type === "TILE_LANDED") {
+      setEventCard({
+        tileName: event.tileName,
+        tileText: event.tileText,
+        coinsDelta: event.coinsDelta,
+        isGlobal: event.isGlobal,
+      })
     }
   }, [])
 
@@ -48,7 +60,7 @@ export default function Home() {
   }
 
   const handleAnswer = async (questionIndex: number, answerIndex: number) => {
-    // Answer is submitted in quiz-screen, this is for any post-answer logic
+    // Answer is submitted in quiz-screen
   }
 
   const handleNextQuestion = async () => {
@@ -91,27 +103,35 @@ export default function Home() {
     }
   }
 
-  // Show name entry if no player
   if (!currentPlayer) {
     return <NameEntry onJoin={handleJoin} onReset={handleReset} />
   }
 
-  // Show quiz with leaderboard
+  const allPlayersComplete = allPlayers.every((p) => p.currentQuestionIndex >= QUESTIONS.length)
+
+  if (allPlayersComplete && allPlayers.length > 0) {
+    return <GameOver players={allPlayers} onPlayAgain={handleReset} />
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 p-4">
-        {/* Quiz Screen - Main Content */}
-        <div className="lg:col-span-3">
-          <div className="bg-card border border-border rounded-lg p-6">
-            <QuizScreen player={currentPlayer} onAnswer={handleAnswer} onNextQuestion={handleNextQuestion} />
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1 flex gap-4 p-4 overflow-hidden" style={{ height: "65%" }}>
+        <div className="flex-1" style={{ width: "75%" }}>
+          <div className="h-full overflow-auto">
+            <Board players={allPlayers} currentPlayerId={playerId} />
           </div>
         </div>
 
-        {/* Leaderboard - Sidebar */}
-        <div className="lg:col-span-1">
+        <div style={{ width: "25%" }}>
           <Leaderboard players={allPlayers} />
         </div>
       </div>
+
+      <div className="flex-1 p-4 overflow-auto bg-card border-t border-border" style={{ height: "35%" }}>
+        <QuizScreen player={currentPlayer} onAnswer={handleAnswer} onNextQuestion={handleNextQuestion} />
+      </div>
+
+      <EventCard event={eventCard} onDismiss={() => setEventCard(null)} />
     </div>
   )
 }

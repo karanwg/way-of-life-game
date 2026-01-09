@@ -5,6 +5,10 @@ export type Player = {
   currentQuestionIndex: number
   answered: boolean
   selectedAnswer: number | null
+  currentTileId: number
+  lapsCompleted: number
+  skippedNextQuestion: boolean
+  nextRolledMax: number | null
 }
 
 export type Question = {
@@ -19,6 +23,8 @@ export type GameEvent =
   | { type: "QUESTION_ANSWERED"; playerId: string; correct: boolean; newCoins: number }
   | { type: "GAME_RESET" }
   | { type: "GAME_STATE_UPDATE"; players: Player[] }
+  | { type: "TILE_LANDED"; playerId: string; tileName: string; tileText: string; coinsDelta: number; isGlobal: boolean }
+  | { type: "TILE_TELEPORTED"; playerId: string; fromTile: string; toTile: string }
 
 export type GameState = {
   players: Map<string, Player>
