@@ -12,6 +12,8 @@ interface BoardProps {
 // Get tile-specific colors based on effect
 function getTileColors(effect: string, coins?: number) {
   switch (effect) {
+    case "lap_complete":
+      return { bg: "from-emerald-500/80 to-green-600/80", border: "border-emerald-400/50", icon: "🏁" }
     case "none":
       return coins === 0
         ? { bg: "from-slate-500/80 to-slate-600/80", border: "border-slate-400/50", icon: "🌀" }
@@ -48,8 +50,8 @@ export function Board({ players, currentPlayerId }: BoardProps) {
   const getTilePosition = (index: number) => {
     // Ellipse with center at (50%, 50%), radiusX ~42%, radiusY ~38%
     const angle = (index / 12) * 2 * Math.PI - Math.PI / 2 // Start from top
-    const radiusX = 42
-    const radiusY = 36
+    const radiusX = 34
+    const radiusY = 28
     const x = 50 + radiusX * Math.cos(angle)
     const y = 50 + radiusY * Math.sin(angle)
     return { x, y }
@@ -97,8 +99,8 @@ export function Board({ players, currentPlayerId }: BoardProps) {
         <ellipse
           cx="50"
           cy="50"
-          rx="42"
-          ry="36"
+          rx="34"
+          ry="28"
           fill="none"
           stroke="url(#pathGradient)"
           strokeWidth="0.8"
@@ -132,9 +134,9 @@ export function Board({ players, currentPlayerId }: BoardProps) {
             style={{
               left: `${pos.x}%`,
               top: `${pos.y}%`,
-              width: "13%",
-              minWidth: "70px",
-              maxWidth: "100px",
+              width: "24%",
+              minWidth: "120px",
+              maxWidth: "180px",
             }}
           >
             {/* Tile card */}
@@ -143,21 +145,21 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                 relative rounded-xl border-2 ${colors.border}
                 bg-gradient-to-br ${colors.bg}
                 backdrop-blur-sm
-                p-1.5
+                p-3
                 shadow-lg
                 ${isCurrentPlayerHere ? "ring-2 ring-accent ring-offset-2 ring-offset-transparent animate-pulse-glow" : ""}
               `}
             >
               {/* Tile number badge */}
-              <div className="absolute -top-2 -left-2 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center text-[10px] font-bold text-white border border-white/30">
+              <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-black/70 flex items-center justify-center text-xs font-bold text-white border border-white/30">
                 {index}
               </div>
 
               {/* Tile icon */}
-              <div className="text-center text-xl mb-0.5">{colors.icon}</div>
+              <div className="text-center text-3xl mb-2">{colors.icon}</div>
 
               {/* Tile name */}
-              <div className="text-[8px] font-bold text-white text-center leading-tight line-clamp-2 min-h-[20px]">
+              <div className="text-xs font-bold text-white text-center leading-tight line-clamp-2 min-h-[32px]">
                 {tile.name}
               </div>
 
@@ -165,7 +167,7 @@ export function Board({ players, currentPlayerId }: BoardProps) {
               {tile.coins !== 0 && tile.coins !== undefined && (
                 <div
                   className={`
-                  text-[9px] font-bold text-center mt-0.5
+                  text-sm font-bold text-center mt-1
                   ${tile.coins > 0 ? "text-yellow-300" : "text-red-300"}
                 `}
                 >
@@ -174,9 +176,13 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                 </div>
               )}
 
+              {tile.lapBonus && (
+                <div className="text-sm font-bold text-center mt-1 text-yellow-300">+{tile.lapBonus}</div>
+              )}
+
               {/* Player pawns on this tile */}
               {playersHere.length > 0 && (
-                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 flex gap-1">
+                <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 flex gap-1">
                   {playersHere.slice(0, 4).map((player) => (
                     <PlayerPawn
                       key={player.id}
@@ -187,7 +193,7 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                     />
                   ))}
                   {playersHere.length > 4 && (
-                    <div className="text-[10px] font-bold text-white bg-black/60 px-1 rounded">
+                    <div className="text-xs font-bold text-white bg-black/60 px-1 rounded">
                       +{playersHere.length - 4}
                     </div>
                   )}

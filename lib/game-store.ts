@@ -77,17 +77,18 @@ export function advanceQuestion(playerId: string): {
     player.nextRolledMax = null
 
     const newTileId = movePlayerForward(player.currentTileId, dieRoll)
-    const wasOnStart = player.currentTileId === 0
+    const previousTileId = player.currentTileId
 
-    if (!wasOnStart && newTileId <= dieRoll - 1) {
+    const passedSpawn = newTileId < previousTileId && previousTileId !== 0
+
+    if (passedSpawn) {
       player.lapsCompleted += 1
-      player.coins += 500
     }
 
     player.currentTileId = newTileId
     const tile = getTileById(newTileId)
     if (tile) {
-      const tileResult = processTileEffect(player, tile, gameState.players)
+      const tileResult = processTileEffect(player, tile, gameState.players, false)
 
       player.coins += tileResult.coinsDelta
 
@@ -112,22 +113,24 @@ export function advanceQuestion(playerId: string): {
         }
       }
 
-      tileEvent = {
-        tileName: tile.name,
-        tileText: tile.text,
-        coinsDelta: tileResult.coinsDelta,
-        isGlobal: !!tileResult.globalEffect,
-      }
+      if (!tileResult.skipEvent) {
+        tileEvent = {
+          tileName: tile.name,
+          tileText: tile.text,
+          coinsDelta: tileResult.coinsDelta,
+          isGlobal: !!tileResult.globalEffect,
+        }
 
-      const gameEvent: GameEvent = {
-        type: "TILE_LANDED",
-        playerId,
-        tileName: tile.name,
-        tileText: tile.text,
-        coinsDelta: tileResult.coinsDelta,
-        isGlobal: !!tileResult.globalEffect,
+        const gameEvent: GameEvent = {
+          type: "TILE_LANDED",
+          playerId,
+          tileName: tile.name,
+          tileText: tile.text,
+          coinsDelta: tileResult.coinsDelta,
+          isGlobal: !!tileResult.globalEffect,
+        }
+        gameEventEmitter.emit("game-event", gameEvent)
       }
-      gameEventEmitter.emit("game-event", gameEvent)
     }
 
     player.currentQuestionIndex += 1
