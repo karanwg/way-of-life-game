@@ -11,20 +11,76 @@ import { useGameStream } from "@/hooks/use-game-stream"
 import type { Player, GameEvent } from "@/lib/types"
 import { QUESTIONS } from "@/lib/questions"
 
+const STORAGE_KEY = "way-of-life-player-id"
+
 export default function Home() {
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
   const [eventCard, setEventCard] = useState<EventCardData | null>(null)
+  const [isRestoring, setIsRestoring] = useState(true)
+
+  // Try to restore session from localStorage on mount
+  useEffect(() => {
+    const restoreSession = async () => {
+      const savedPlayerId = localStorage.getItem(STORAGE_KEY)
+      if (!savedPlayerId) {
+        setIsRestoring(false)
+        return
+      }
+
+      try {
+        // Check if the player still exists on the server
+        const response = await fetch("/api/game", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "get-state",
+            playerId: savedPlayerId,
+          }),
+        })
+
+        if (!response.ok) throw new Error("Failed to restore session")
+
+        const data = await response.json()
+        if (data.currentPlayer) {
+          setPlayerId(savedPlayerId)
+          setCurrentPlayer(data.currentPlayer)
+        } else {
+          // Player no longer exists on server, clear localStorage
+          localStorage.removeItem(STORAGE_KEY)
+        }
+      } catch (error) {
+        console.error("Error restoring session:", error)
+        localStorage.removeItem(STORAGE_KEY)
+      } finally {
+        setIsRestoring(false)
+      }
+    }
+
+    restoreSession()
+  }, [])
+
+  // Save playerId to localStorage whenever it changes
+  useEffect(() => {
+    if (playerId) {
+      localStorage.setItem(STORAGE_KEY, playerId)
+    }
+  }, [playerId])
+
+  const clearSession = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY)
+    setPlayerId(null)
+    setCurrentPlayer(null)
+    setAllPlayers([])
+    setEventCard(null)
+  }, [])
 
   const handleGameEvent = useCallback((event: GameEvent) => {
     if (event.type === "GAME_STATE_UPDATE") {
       setAllPlayers(event.players.sort((a, b) => b.coins - a.coins))
     } else if (event.type === "GAME_RESET") {
-      setPlayerId(null)
-      setCurrentPlayer(null)
-      setAllPlayers([])
-      setEventCard(null)
+      clearSession()
     } else if (event.type === "TILE_LANDED") {
       setEventCard({
         tileName: event.tileName,
@@ -33,7 +89,7 @@ export default function Home() {
         isGlobal: event.isGlobal,
       })
     }
-  }, [])
+  }, [clearSession])
 
   useGameStream(handleGameEvent)
 
@@ -91,7 +147,9 @@ export default function Home() {
       if (!response.ok) throw new Error("Failed to advance question")
 
       const data = await response.json()
-      setCurrentPlayer(data.player)
+      if (data.player) {
+        setCurrentPlayer(data.player)
+      }
 
       // Show tile event card after dice animation (only if correct answer)
       if (data.tileEvent && wasCorrect) {
@@ -123,9 +181,22 @@ export default function Home() {
       })
 
       if (!response.ok) throw new Error("Failed to reset game")
+      clearSession()
     } catch (error) {
       console.error("Error resetting game:", error)
     }
+  }
+
+  // Show loading while restoring session
+  if (isRestoring) {
+    return (
+      <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-purple-300 text-lg">Restoring your game...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!playerId || !currentPlayer) {
