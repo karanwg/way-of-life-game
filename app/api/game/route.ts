@@ -39,7 +39,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "answer") {
-      // Player submits an answer
       const result = updatePlayerAnswer(playerId, questionIndex, answerIndex)
       if (!result) {
         return NextResponse.json({ success: false, error: "Player or question not found" }, { status: 400 })
@@ -53,18 +52,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "next-question") {
-      // Advance to the next question
-      advanceQuestion(playerId)
+      const result = advanceQuestion(playerId)
       const player = getPlayer(playerId)
       return NextResponse.json({
         success: true,
         player,
         nextQuestionIndex: player?.currentQuestionIndex,
+        dieRoll: result?.dieRoll ?? null,
+        tileEvent: result?.tileEvent ?? null,
       })
     }
 
     if (action === "get-state") {
-      // Get current game state
       const players = getAllPlayers()
       const player = getPlayer(playerId)
       return NextResponse.json({
@@ -75,7 +74,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "reset") {
-      // Admin reset button
       resetGameState()
       return NextResponse.json({ success: true, message: "Game reset" })
     }

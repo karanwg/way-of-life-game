@@ -63,8 +63,8 @@ export default function Home() {
     // Answer is submitted in quiz-screen
   }
 
-  const handleNextQuestion = async () => {
-    if (!playerId) return
+  const handleNextQuestion = async (): Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }> => {
+    if (!playerId) return { dieRoll: null, tileEvent: null }
 
     try {
       const response = await fetch("/api/game", {
@@ -80,8 +80,21 @@ export default function Home() {
 
       const data = await response.json()
       setCurrentPlayer(data.player)
+
+      // Show tile event card after dice animation
+      if (data.tileEvent) {
+        setTimeout(() => {
+          setEventCard(data.tileEvent)
+        }, 1500)
+      }
+
+      return {
+        dieRoll: data.dieRoll,
+        tileEvent: data.tileEvent,
+      }
     } catch (error) {
       console.error("Error advancing to next question:", error)
+      return { dieRoll: null, tileEvent: null }
     }
   }
 
@@ -114,23 +127,28 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="flex-1 flex gap-4 p-4 overflow-hidden" style={{ height: "65%" }}>
-        <div className="flex-1" style={{ width: "75%" }}>
-          <div className="h-full overflow-auto">
-            <Board players={allPlayers} currentPlayerId={playerId} />
-          </div>
+    <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex flex-col overflow-hidden">
+      {/* Top section - 65% height: Board + Leaderboard */}
+      <div className="flex gap-3 p-3" style={{ height: "65%" }}>
+        {/* Board - 75% width */}
+        <div className="h-full" style={{ width: "75%" }}>
+          <Board players={allPlayers} currentPlayerId={playerId} />
         </div>
 
-        <div style={{ width: "25%" }}>
+        {/* Leaderboard - 25% width */}
+        <div className="h-full" style={{ width: "25%" }}>
           <Leaderboard players={allPlayers} />
         </div>
       </div>
 
-      <div className="flex-1 p-4 overflow-auto bg-card border-t border-border" style={{ height: "35%" }}>
-        <QuizScreen player={currentPlayer} onAnswer={handleAnswer} onNextQuestion={handleNextQuestion} />
+      {/* Bottom section - 35% height: Quiz */}
+      <div className="flex-1 p-3 pt-0" style={{ height: "35%" }}>
+        <div className="h-full bg-gradient-to-br from-purple-900/50 to-indigo-900/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-3 overflow-hidden">
+          <QuizScreen player={currentPlayer} onAnswer={handleAnswer} onNextQuestion={handleNextQuestion} />
+        </div>
       </div>
 
+      {/* Event Card Overlay */}
       <EventCard event={eventCard} onDismiss={() => setEventCard(null)} />
     </div>
   )

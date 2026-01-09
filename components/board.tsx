@@ -2,10 +2,41 @@
 
 import type { Player } from "@/lib/types"
 import { TILES } from "@/lib/board-tiles"
+import { PlayerPawn } from "@/components/player-pawn"
 
 interface BoardProps {
   players: Player[]
   currentPlayerId: string
+}
+
+// Get tile-specific colors based on effect
+function getTileColors(effect: string, coins?: number) {
+  switch (effect) {
+    case "none":
+      return coins === 0
+        ? { bg: "from-slate-500/80 to-slate-600/80", border: "border-slate-400/50", icon: "🌀" }
+        : { bg: "from-emerald-500/80 to-emerald-600/80", border: "border-emerald-400/50", icon: "🎁" }
+    case "coins":
+      return coins && coins > 0
+        ? { bg: "from-yellow-400/80 to-amber-500/80", border: "border-yellow-300/50", icon: "💰" }
+        : { bg: "from-red-500/80 to-rose-600/80", border: "border-red-400/50", icon: "💸" }
+    case "teleport":
+      return { bg: "from-purple-500/80 to-violet-600/80", border: "border-purple-400/50", icon: "🌀" }
+    case "teleport_random":
+      return { bg: "from-indigo-500/80 to-purple-600/80", border: "border-indigo-400/50", icon: "🎲" }
+    case "move_and_coins":
+      return { bg: "from-orange-500/80 to-red-600/80", border: "border-orange-400/50", icon: "👟" }
+    case "coins_global":
+      return coins && coins < 0
+        ? { bg: "from-pink-500/80 to-rose-600/80", border: "border-pink-400/50", icon: "💔" }
+        : { bg: "from-pink-400/80 to-fuchsia-500/80", border: "border-pink-300/50", icon: "💍" }
+    case "debuff_skip_next":
+      return { bg: "from-gray-600/80 to-slate-700/80", border: "border-gray-500/50", icon: "⛓️" }
+    case "next_die_cap":
+      return { bg: "from-cyan-500/80 to-teal-600/80", border: "border-cyan-400/50", icon: "📋" }
+    default:
+      return { bg: "from-slate-500/80 to-slate-600/80", border: "border-slate-400/50", icon: "❓" }
+  }
 }
 
 export function Board({ players, currentPlayerId }: BoardProps) {
@@ -13,62 +44,159 @@ export function Board({ players, currentPlayerId }: BoardProps) {
     return players.filter((p) => p.currentTileId === tileId)
   }
 
+  // Calculate elliptical positions for 12 tiles
+  const getTilePosition = (index: number) => {
+    // Ellipse with center at (50%, 50%), radiusX ~42%, radiusY ~38%
+    const angle = (index / 12) * 2 * Math.PI - Math.PI / 2 // Start from top
+    const radiusX = 42
+    const radiusY = 36
+    const x = 50 + radiusX * Math.cos(angle)
+    const y = 50 + radiusY * Math.sin(angle)
+    return { x, y }
+  }
+
+  // Find player index for consistent coloring
+  const getPlayerIndex = (playerId: string) => {
+    return players.findIndex((p) => p.id === playerId)
+  }
+
   return (
-    <div className="w-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
-      <h2 className="text-lg font-bold text-foreground mb-6">Way of Life Board</h2>
+    <div className="w-full h-full relative bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 rounded-2xl overflow-hidden p-2">
+      {/* Starfield background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(50)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-1 h-1 bg-white rounded-full opacity-40"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`,
+            }}
+          />
+        ))}
+      </div>
 
-      {/* 12-Tile Board in a 4x3 Grid */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
-        {TILES.map((tile) => {
-          const playersHere = getPlayersOnTile(tile.id)
-          const isCurrentPlayer = playersHere.some((p) => p.id === currentPlayerId)
+      {/* Center decoration - Game title */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-0">
+        <div className="text-2xl font-black bg-gradient-to-r from-yellow-400 via-pink-500 to-cyan-400 bg-clip-text text-transparent">
+          WAY OF
+        </div>
+        <div className="text-3xl font-black bg-gradient-to-r from-cyan-400 via-purple-500 to-yellow-400 bg-clip-text text-transparent">
+          LIFE
+        </div>
+        <div className="text-xs text-muted-foreground mt-1">12 Tiles of Chaos</div>
+      </div>
 
-          return (
+      {/* Connecting path (ellipse) */}
+      <svg
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
+        <ellipse
+          cx="50"
+          cy="50"
+          rx="42"
+          ry="36"
+          fill="none"
+          stroke="url(#pathGradient)"
+          strokeWidth="0.8"
+          strokeDasharray="2 1"
+          opacity="0.5"
+        />
+        <defs>
+          <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#4ecdc4" />
+            <stop offset="50%" stopColor="#ffd93d" />
+            <stop offset="100%" stopColor="#ff6b6b" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      {/* Tiles */}
+      {TILES.map((tile, index) => {
+        const pos = getTilePosition(index)
+        const playersHere = getPlayersOnTile(tile.id)
+        const isCurrentPlayerHere = playersHere.some((p) => p.id === currentPlayerId)
+        const colors = getTileColors(tile.effect, tile.coins)
+
+        return (
+          <div
+            key={tile.id}
+            className={`
+              absolute transform -translate-x-1/2 -translate-y-1/2
+              transition-all duration-300
+              ${isCurrentPlayerHere ? "scale-110 z-20" : "z-10 hover:scale-105"}
+            `}
+            style={{
+              left: `${pos.x}%`,
+              top: `${pos.y}%`,
+              width: "13%",
+              minWidth: "70px",
+              maxWidth: "100px",
+            }}
+          >
+            {/* Tile card */}
             <div
-              key={tile.id}
-              className={`relative aspect-square rounded-lg border-2 p-3 flex flex-col items-center justify-center transition-all ${
-                isCurrentPlayer
-                  ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30 ring-2 ring-yellow-400"
-                  : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-primary/50"
-              }`}
+              className={`
+                relative rounded-xl border-2 ${colors.border}
+                bg-gradient-to-br ${colors.bg}
+                backdrop-blur-sm
+                p-1.5
+                shadow-lg
+                ${isCurrentPlayerHere ? "ring-2 ring-accent ring-offset-2 ring-offset-transparent animate-pulse-glow" : ""}
+              `}
             >
-              {/* Tile Content */}
-              <div className="text-center text-xs leading-tight mb-2">
-                <p className="font-bold text-foreground truncate">{tile.name}</p>
-                <p className="text-xs text-muted-foreground">{tile.effect !== "none" ? `[${tile.effect}]` : ""}</p>
+              {/* Tile number badge */}
+              <div className="absolute -top-2 -left-2 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center text-[10px] font-bold text-white border border-white/30">
+                {index}
               </div>
 
-              {/* Player Tokens */}
+              {/* Tile icon */}
+              <div className="text-center text-xl mb-0.5">{colors.icon}</div>
+
+              {/* Tile name */}
+              <div className="text-[8px] font-bold text-white text-center leading-tight line-clamp-2 min-h-[20px]">
+                {tile.name}
+              </div>
+
+              {/* Coins indicator */}
+              {tile.coins !== 0 && tile.coins !== undefined && (
+                <div
+                  className={`
+                  text-[9px] font-bold text-center mt-0.5
+                  ${tile.coins > 0 ? "text-yellow-300" : "text-red-300"}
+                `}
+                >
+                  {tile.coins > 0 ? "+" : ""}
+                  {tile.coins}
+                </div>
+              )}
+
+              {/* Player pawns on this tile */}
               {playersHere.length > 0 && (
-                <div className="absolute bottom-1 flex gap-1 flex-wrap justify-center">
-                  {playersHere.slice(0, 3).map((player) => (
-                    <div
+                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 flex gap-1">
+                  {playersHere.slice(0, 4).map((player) => (
+                    <PlayerPawn
                       key={player.id}
-                      className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                        isCurrentPlayer ? "bg-yellow-600" : "bg-primary"
-                      }`}
-                      title={player.name}
-                    >
-                      {player.name.charAt(0)}
-                    </div>
+                      player={player}
+                      playerIndex={getPlayerIndex(player.id)}
+                      isCurrentPlayer={player.id === currentPlayerId}
+                      size="sm"
+                    />
                   ))}
-                  {playersHere.length > 3 && (
-                    <div className="text-xs font-bold text-muted-foreground">+{playersHere.length - 3}</div>
+                  {playersHere.length > 4 && (
+                    <div className="text-[10px] font-bold text-white bg-black/60 px-1 rounded">
+                      +{playersHere.length - 4}
+                    </div>
                   )}
                 </div>
               )}
             </div>
-          )
-        })}
-      </div>
-
-      {/* Board Stats */}
-      <div className="bg-slate-100 dark:bg-slate-700/50 rounded p-3 text-xs">
-        <p className="text-muted-foreground">
-          <span className="font-semibold text-foreground">Current Tile:</span>{" "}
-          {TILES[players.find((p) => p.id === currentPlayerId)?.currentTileId || 0]?.name}
-        </p>
-      </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

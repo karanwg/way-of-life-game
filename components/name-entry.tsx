@@ -27,36 +27,63 @@ export function NameEntry({ onJoin, onReset }: NameEntryProps) {
   }
 
   return (
-    <div className="min-h-screen gradient-bg relative overflow-hidden">
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
-        <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-amber-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-4000"></div>
+    <div className="fixed inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl animate-pulse" />
+        <div
+          className="absolute top-1/3 right-10 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "1s" }}
+        />
+        <div
+          className="absolute bottom-10 left-1/3 w-80 h-80 bg-yellow-500/20 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "2s" }}
+        />
+
+        {/* Floating emojis */}
+        {["🎲", "🪙", "🎯", "🎮", "🏆", "✨", "🎉", "💫"].map((emoji, i) => (
+          <div
+            key={i}
+            className="absolute text-3xl animate-float opacity-40"
+            style={{
+              left: `${10 + i * 12}%`,
+              top: `${20 + (i % 3) * 25}%`,
+              animationDelay: `${i * 0.3}s`,
+              animationDuration: `${3 + (i % 2)}s`,
+            }}
+          >
+            {emoji}
+          </div>
+        ))}
       </div>
 
-      <div className="relative z-10 flex items-center justify-center min-h-screen">
-        <div className="w-full max-w-md mx-auto px-4">
-          <div className="backdrop-blur-xl bg-slate-900/40 border border-cyan-500/30 rounded-2xl p-8 shadow-2xl space-y-8">
-            <div className="space-y-4 text-center">
-              <h1 className="text-6xl font-black tracking-tight">
-                <span className="bg-gradient-to-r from-pink-500 via-cyan-500 to-amber-400 bg-clip-text text-transparent">
+      {/* Main content */}
+      <div className="relative z-10 flex items-center justify-center min-h-full py-8 px-4">
+        <div className="w-full max-w-md">
+          {/* Game card */}
+          <div className="backdrop-blur-xl bg-white/5 border-2 border-purple-500/30 rounded-3xl p-8 shadow-2xl">
+            {/* Title */}
+            <div className="text-center mb-8">
+              <div className="text-6xl mb-4">🎲</div>
+              <h1 className="text-5xl font-black mb-2">
+                <span className="bg-gradient-to-r from-yellow-400 via-pink-500 to-cyan-400 bg-clip-text text-transparent">
                   Way of Life
                 </span>
               </h1>
-              <p className="text-lg text-cyan-200 font-semibold">Answer. Move. Survive. Thrive.</p>
-              <p className="text-sm text-slate-400">A Monopoly-style journey through the chaos of existence</p>
+              <p className="text-lg text-cyan-300 font-semibold">Answer. Move. Survive. Thrive.</p>
             </div>
 
+            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-cyan-300 mb-3">What's your name, player?</label>
+                <label className="block text-sm font-bold text-purple-300 mb-2">Enter your name</label>
                 <Input
                   type="text"
-                  placeholder="Enter your name"
+                  placeholder="Your name here..."
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
                   disabled={isLoading}
-                  className="text-center text-lg h-12 bg-slate-800/80 border-pink-500/50 text-cyan-50 placeholder:text-slate-500 focus:border-pink-500 focus:ring-pink-500"
+                  className="text-center text-lg h-14 bg-purple-900/50 border-2 border-purple-500/50 text-white placeholder:text-purple-400 focus:border-pink-500 focus:ring-pink-500 rounded-xl"
                   autoFocus
                 />
               </div>
@@ -64,9 +91,9 @@ export function NameEntry({ onJoin, onReset }: NameEntryProps) {
               <Button
                 type="submit"
                 disabled={isLoading || !playerName.trim()}
-                className="w-full h-12 text-base font-bold bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-pink-500/50"
+                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-pink-500/30 hover:scale-[1.02]"
               >
-                {isLoading ? "Entering the game..." : "Join the Game"}
+                {isLoading ? "Joining..." : "🎮 Start Playing"}
               </Button>
 
               <Button
@@ -74,56 +101,56 @@ export function NameEntry({ onJoin, onReset }: NameEntryProps) {
                 variant="outline"
                 onClick={onReset}
                 disabled={isLoading}
-                className="w-full h-12 text-base font-semibold border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/10 hover:border-cyan-500 rounded-lg transition-all duration-200 bg-transparent"
+                className="w-full h-12 text-sm font-semibold border-2 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 rounded-xl transition-all bg-transparent"
               >
                 Reset Game (Admin)
               </Button>
             </form>
 
-            <div className="space-y-3 pt-4 border-t border-slate-700/50">
-              <h2 className="font-bold text-amber-400 text-sm uppercase tracking-widest">How to Play:</h2>
-              <ul className="space-y-2 text-sm text-slate-300">
+            {/* How to play */}
+            <div className="mt-8 pt-6 border-t border-purple-500/30">
+              <h2 className="font-bold text-yellow-400 text-sm mb-3 flex items-center gap-2">
+                <span>📖</span> How to Play
+              </h2>
+              <ul className="space-y-2 text-sm text-purple-200">
                 <li className="flex items-start gap-2">
-                  <span className="text-pink-500 font-bold">→</span>
+                  <span className="text-pink-400">🎯</span>
                   <span>
-                    Answer <span className="text-cyan-300 font-semibold">20 MCQ questions</span> to move around the
-                    board
+                    Answer <strong className="text-cyan-300">20 questions</strong> to move around the board
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-cyan-500 font-bold">→</span>
+                  <span className="text-cyan-400">⏱️</span>
                   <span>
-                    <span className="text-amber-300 font-semibold">20 seconds</span> per question before auto-skip
+                    <strong className="text-yellow-300">20 seconds</strong> per question
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-amber-400 font-bold">→</span>
+                  <span className="text-green-400">💰</span>
                   <span>
-                    <span className="text-green-400 font-semibold">+100 coins</span> correct,{" "}
-                    <span className="text-red-400 font-semibold">-50 coins</span> wrong
+                    <strong className="text-green-400">+100</strong> correct,{" "}
+                    <strong className="text-red-400">-50</strong> wrong
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-green-500 font-bold">→</span>
+                  <span className="text-purple-400">🎲</span>
                   <span>
-                    Land on <span className="text-pink-300 font-semibold">tiles</span> to trigger wild events
+                    Land on tiles for <strong className="text-pink-300">wild events!</strong>
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-purple-500 font-bold">→</span>
+                  <span className="text-yellow-400">👥</span>
                   <span>
-                    Open <span className="text-cyan-300 font-semibold">multiple tabs</span> to simulate multiplayer
+                    Open <strong className="text-cyan-300">multiple tabs</strong> for multiplayer
                   </span>
                 </li>
               </ul>
             </div>
           </div>
 
-          <div className="text-center mt-8">
-            <p className="text-slate-500 text-sm">
-              <span className="text-amber-400">✨</span> May the odds be ever in your favor{" "}
-              <span className="text-amber-400">✨</span>
-            </p>
+          {/* Footer */}
+          <div className="text-center mt-6">
+            <p className="text-purple-400 text-sm">✨ May the odds be ever in your favor ✨</p>
           </div>
         </div>
       </div>

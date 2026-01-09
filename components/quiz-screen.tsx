@@ -1,15 +1,16 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
-import { Button } from "@/components/ui/button"
 import { CountdownTimer } from "./countdown-timer"
+import { DiceRoller } from "./dice-roller"
 import { QUESTIONS } from "@/lib/questions"
 import type { Player } from "@/lib/types"
+import type { EventCardData } from "./event-card"
 
 interface QuizScreenProps {
   player: Player
   onAnswer: (questionIndex: number, answerIndex: number) => Promise<void>
-  onNextQuestion: () => Promise<void>
+  onNextQuestion: () => Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }>
 }
 
 export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps) {
@@ -19,6 +20,9 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
     message: string
   } | null>(null)
   const [timerActive, setTimerActive] = useState(true)
+  const [diceValue, setDiceValue] = useState<number | null>(null)
+  const [isRolling, setIsRolling] = useState(false)
+  const [showDice, setShowDice] = useState(false)
   const feedbackRef = useRef<NodeJS.Timeout | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -72,9 +76,7 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
       const data = await response.json()
       setFeedback({
         correct: data.correct,
-        message: data.correct
-          ? `Correct! +100 coins (Total: ${data.newCoins})`
-          : `Incorrect! -50 coins (Total: ${data.newCoins})`,
+        message: data.correct ? `Correct! +100 coins` : `Wrong! -50 coins`,
       })
     } catch (error) {
       console.error("Error submitting answer:", error)
@@ -92,25 +94,46 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
     try {
-      await onNextQuestion()
-      setFeedback(null)
-      setTimerActive(true)
+      // Show dice rolling
+      setShowDice(true)
+      setIsRolling(true)
+      setDiceValue(null)
+
+      const result = await onNextQuestion()
+
+      // Set the actual dice value after animation
+      if (result.dieRoll !== null) {
+        setDiceValue(result.dieRoll)
+      }
+
+      // Wait for dice animation to complete
+      setTimeout(() => {
+        setIsRolling(false)
+
+        // Hide dice and reset for next question
+        setTimeout(() => {
+          setShowDice(false)
+          setDiceValue(null)
+          setFeedback(null)
+          setTimerActive(true)
+        }, 1000)
+      }, 700)
     } catch (error) {
       console.error("Error advancing to next question:", error)
+      setShowDice(false)
+      setIsRolling(false)
     }
   }
 
   if (isQuizComplete) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background px-4">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-foreground">Quiz Complete!</h1>
-          <p className="text-xl text-muted-foreground">
-            Final Score: <span className="text-primary font-bold">{player.coins}</span> coins
+      <div className="flex flex-col items-center justify-center h-full">
+        <div className="text-center space-y-2">
+          <span className="text-4xl">🎉</span>
+          <h1 className="text-2xl font-bold text-white">Quiz Complete!</h1>
+          <p className="text-lg text-purple-300">
+            Final Score: <span className="text-yellow-400 font-bold">{player.coins}</span> coins
           </p>
-          <Button onClick={() => window.location.reload()} size="lg">
-            Play Again
-          </Button>
         </div>
       </div>
     )
@@ -118,25 +141,47 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
 
   if (!currentQuestion) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Loading question...</p>
+      <div className="flex items-center justify-center h-full">
+        <p className="text-purple-300">Loading question...</p>
       </div>
     )
   }
 
+  // Answer button colors
+  const buttonColors = [
+    "from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 border-red-400",
+    "from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 border-blue-400",
+    "from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 border-yellow-400",
+    "from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border-green-400",
+  ]
+
   return (
-    <div className="flex flex-col gap-6 p-4">
-      {/* Question Header */}
-      <div className="space-y-2">
+    <div className="flex flex-col h-full gap-2 relative">
+      {/* Dice overlay when rolling */}
+      {showDice && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex items-center justify-center rounded-xl">
+          <div className="text-center">
+            <DiceRoller value={diceValue} isRolling={isRolling} />
+            {!isRolling && diceValue !== null && (
+              <p className="text-white mt-2 text-sm animate-bounce-in">Moving {diceValue} spaces!</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-purple-300">
             Question {player.currentQuestionIndex + 1} of {QUESTIONS.length}
           </span>
-          <span className="text-sm font-bold text-primary">{player.coins} coins</span>
+          <span className="text-xs font-bold text-yellow-400 flex items-center gap-1">
+            <span>🪙</span> {player.coins}
+          </span>
         </div>
-        <div className="w-full bg-secondary/20 rounded-full h-1.5">
+        <div className="w-full bg-purple-900/50 rounded-full h-1.5">
           <div
-            className="h-full bg-primary rounded-full transition-all duration-300"
+            className="h-full bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full transition-all duration-300"
             style={{
               width: `${((player.currentQuestionIndex + 1) / QUESTIONS.length) * 100}%`,
             }}
@@ -144,12 +189,12 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
         </div>
       </div>
 
-      {/* Question Text */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-foreground text-pretty">{currentQuestion.question}</h2>
-
-        {/* Timer */}
-        <div className="flex justify-center">
+      {/* Question and Timer row */}
+      <div className="flex gap-3 items-start">
+        <div className="flex-1">
+          <h2 className="text-base font-bold text-white text-pretty leading-snug">{currentQuestion.question}</h2>
+        </div>
+        <div className="flex-shrink-0">
           <CountdownTimer
             initialSeconds={20}
             onTimeExpired={handleTimeExpired}
@@ -158,34 +203,46 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
         </div>
       </div>
 
-      {/* Answer Options */}
-      <div className="grid gap-3">
+      {/* Answer buttons - 2x2 grid */}
+      <div className="grid grid-cols-2 gap-2 flex-1">
         {currentQuestion.options.map((option, index) => (
-          <Button
+          <button
             key={index}
             onClick={() => handleSelectAnswer(index)}
             disabled={isAnswering || !timerActive || player.answered || feedback !== null}
-            variant="outline"
-            className="h-auto p-4 text-left justify-start text-base"
+            className={`
+              relative rounded-xl border-2 p-2
+              bg-gradient-to-br ${buttonColors[index]}
+              text-white font-medium text-sm text-left
+              transition-all duration-200
+              hover:scale-[1.02] hover:shadow-lg
+              disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
+              flex items-start gap-2
+            `}
           >
-            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary font-bold mr-3 flex-shrink-0">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20 font-bold flex-shrink-0 text-xs">
               {String.fromCharCode(65 + index)}
             </span>
-            <span className="flex-1">{option}</span>
-          </Button>
+            <span className="flex-1 line-clamp-3">{option}</span>
+          </button>
         ))}
       </div>
 
       {/* Feedback */}
       {feedback && (
         <div
-          className={`p-4 rounded-lg border transition-all ${
-            feedback.correct
-              ? "bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400"
-              : "bg-destructive/10 border-destructive/30 text-destructive dark:text-red-400"
-          }`}
+          className={`
+            p-2 rounded-xl text-center text-sm font-bold
+            animate-bounce-in
+            ${
+              feedback.correct
+                ? "bg-green-500/20 border-2 border-green-500/50 text-green-400"
+                : "bg-red-500/20 border-2 border-red-500/50 text-red-400"
+            }
+          `}
         >
-          <p className="font-semibold">{feedback.message}</p>
+          <span className="mr-2">{feedback.correct ? "✅" : "❌"}</span>
+          {feedback.message}
         </div>
       )}
     </div>

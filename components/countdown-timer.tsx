@@ -35,8 +35,9 @@ export function CountdownTimer({ initialSeconds, onTimeExpired, isActive }: Coun
   const isLow = timeLeft <= 5
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative w-24 h-24 rounded-full border-4 border-primary/20 flex items-center justify-center">
+    /* Compact timer for side-by-side layout */
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative w-16 h-16 rounded-full border-4 border-primary/20 flex items-center justify-center">
         <div
           className={`absolute inset-0 rounded-full transition-all duration-300 ${
             isLow ? "border-4 border-destructive" : "border-4 border-primary"
@@ -47,11 +48,11 @@ export function CountdownTimer({ initialSeconds, onTimeExpired, isActive }: Coun
             }% ${50 + 50 * Math.sin((percentage / 100) * Math.PI * 2 - Math.PI / 2)}%)`,
           }}
         />
-        <span className={`relative text-2xl font-bold ${isLow ? "text-destructive" : "text-foreground"}`}>
+        <span className={`relative text-sm font-bold ${isLow ? "text-destructive" : "text-foreground"}`}>
           {timeLeft}s
         </span>
       </div>
-      <p className={`text-sm font-medium ${isLow ? "text-destructive" : "text-muted-foreground"}`}>Time remaining</p>
+      <p className={`text-xs font-medium ${isLow ? "text-destructive" : "text-muted-foreground"}`}>Time</p>
     </div>
   )
 }

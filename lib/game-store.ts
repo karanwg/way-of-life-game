@@ -4,10 +4,8 @@ import { QUESTIONS } from "./questions"
 import { getTileById } from "./board-tiles"
 import { processTileEffect, rollDie, movePlayerForward } from "./board-logic"
 
-// Singleton event emitter for pub-sub
 export const gameEventEmitter = new EventEmitter()
 
-// Singleton in-memory game state
 let gameState: GameState = {
   players: new Map(),
 }
@@ -60,70 +58,85 @@ export function updatePlayerAnswer(
   return { correct, newCoins: player.coins }
 }
 
-export function advanceQuestion(playerId: string): void {
+export function advanceQuestion(playerId: string): {
+  dieRoll: number | null
+  tileEvent: { tileName: string; tileText: string; coinsDelta: number; isGlobal: boolean } | null
+} | null {
   const player = gameState.players.get(playerId)
-  if (player) {
-    if (player.skippedNextQuestion) {
-      player.skippedNextQuestion = false
-      player.currentQuestionIndex += 1
-    } else {
-      const maxRoll = player.nextRolledMax || 6
-      const dieRoll = rollDie(maxRoll)
-      player.nextRolledMax = null
+  if (!player) return null
 
-      const newTileId = movePlayerForward(player.currentTileId, dieRoll)
-      const wasOnStart = player.currentTileId === 0
-      const nowPastStart = newTileId < player.currentTileId || (newTileId >= player.currentTileId && dieRoll > 0)
+  let dieRoll: number | null = null
+  let tileEvent: { tileName: string; tileText: string; coinsDelta: number; isGlobal: boolean } | null = null
 
-      if (!wasOnStart && newTileId <= dieRoll - 1) {
-        player.lapsCompleted += 1
-        player.coins += 500
-      }
+  if (player.skippedNextQuestion) {
+    player.skippedNextQuestion = false
+    player.currentQuestionIndex += 1
+  } else {
+    const maxRoll = player.nextRolledMax || 4 // d4 die
+    dieRoll = rollDie(maxRoll)
+    player.nextRolledMax = null
 
-      player.currentTileId = newTileId
-      const tile = getTileById(newTileId)
-      if (tile) {
-        const tileResult = processTileEffect(player, tile, gameState.players)
+    const newTileId = movePlayerForward(player.currentTileId, dieRoll)
+    const wasOnStart = player.currentTileId === 0
 
-        player.coins += tileResult.coinsDelta
-
-        if (tileResult.newTileId !== undefined) {
-          player.currentTileId = tileResult.newTileId
-        }
-
-        if (tileResult.skippedNext) {
-          player.skippedNextQuestion = true
-        }
-
-        if (tileResult.nextRolledMax !== undefined) {
-          player.nextRolledMax = tileResult.nextRolledMax
-        }
-
-        if (tileResult.globalEffect) {
-          for (const otherId of tileResult.globalEffect.affectedPlayers) {
-            const otherPlayer = gameState.players.get(otherId)
-            if (otherPlayer) {
-              otherPlayer.coins += tileResult.globalEffect.coinsPerPlayer
-            }
-          }
-        }
-
-        const tileEvent: GameEvent = {
-          type: "TILE_LANDED",
-          playerId,
-          tileName: tile.name,
-          tileText: tile.text,
-          coinsDelta: tileResult.coinsDelta,
-          isGlobal: !!tileResult.globalEffect,
-        }
-        gameEventEmitter.emit("game-event", tileEvent)
-      }
+    if (!wasOnStart && newTileId <= dieRoll - 1) {
+      player.lapsCompleted += 1
+      player.coins += 500
     }
 
-    player.answered = false
-    player.selectedAnswer = null
+    player.currentTileId = newTileId
+    const tile = getTileById(newTileId)
+    if (tile) {
+      const tileResult = processTileEffect(player, tile, gameState.players)
+
+      player.coins += tileResult.coinsDelta
+
+      if (tileResult.newTileId !== undefined) {
+        player.currentTileId = tileResult.newTileId
+      }
+
+      if (tileResult.skippedNext) {
+        player.skippedNextQuestion = true
+      }
+
+      if (tileResult.nextRolledMax !== undefined) {
+        player.nextRolledMax = tileResult.nextRolledMax
+      }
+
+      if (tileResult.globalEffect) {
+        for (const otherId of tileResult.globalEffect.affectedPlayers) {
+          const otherPlayer = gameState.players.get(otherId)
+          if (otherPlayer) {
+            otherPlayer.coins += tileResult.globalEffect.coinsPerPlayer
+          }
+        }
+      }
+
+      tileEvent = {
+        tileName: tile.name,
+        tileText: tile.text,
+        coinsDelta: tileResult.coinsDelta,
+        isGlobal: !!tileResult.globalEffect,
+      }
+
+      const gameEvent: GameEvent = {
+        type: "TILE_LANDED",
+        playerId,
+        tileName: tile.name,
+        tileText: tile.text,
+        coinsDelta: tileResult.coinsDelta,
+        isGlobal: !!tileResult.globalEffect,
+      }
+      gameEventEmitter.emit("game-event", gameEvent)
+    }
+
     player.currentQuestionIndex += 1
   }
+
+  player.answered = false
+  player.selectedAnswer = null
+
+  return { dieRoll, tileEvent }
 }
 
 export function resetGameState(): void {
