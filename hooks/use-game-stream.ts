@@ -13,13 +13,19 @@ export function useGameStream(onEvent: (event: GameEvent) => void) {
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout | null = null
+    let isActive = true
 
     const poll = async () => {
+      if (!isActive) return
+
       try {
         const response = await fetch("/api/game/state")
         if (!response.ok) throw new Error("Failed to fetch game state")
 
         const data = await response.json()
+
+        if (!data.players) return
+
         const currentState = JSON.stringify(data.players)
 
         // Only emit event if players have changed
@@ -39,6 +45,7 @@ export function useGameStream(onEvent: (event: GameEvent) => void) {
     pollInterval = setInterval(poll, 500)
 
     return () => {
+      isActive = false
       if (pollInterval) clearInterval(pollInterval)
     }
   }, [])

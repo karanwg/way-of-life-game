@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { NameEntry } from "@/components/name-entry"
 import { QuizScreen } from "@/components/quiz-screen"
 import { Leaderboard } from "@/components/leaderboard"
@@ -36,6 +36,15 @@ export default function Home() {
   }, [])
 
   useGameStream(handleGameEvent)
+
+  useEffect(() => {
+    if (playerId && allPlayers.length > 0) {
+      const updatedPlayer = allPlayers.find((p) => p.id === playerId)
+      if (updatedPlayer) {
+        setCurrentPlayer(updatedPlayer)
+      }
+    }
+  }, [allPlayers, playerId])
 
   const handleJoin = async (playerName: string) => {
     try {
@@ -75,7 +84,7 @@ export default function Home() {
         body: JSON.stringify({
           action: "next-question",
           playerId,
-          wasCorrect, // Pass wasCorrect to backend
+          wasCorrect,
         }),
       })
 
@@ -119,13 +128,14 @@ export default function Home() {
     }
   }
 
-  if (!currentPlayer) {
+  if (!playerId || !currentPlayer) {
     return <NameEntry onJoin={handleJoin} onReset={handleReset} />
   }
 
-  const allPlayersComplete = allPlayers.every((p) => p.currentQuestionIndex >= QUESTIONS.length)
+  const allPlayersComplete =
+    allPlayers.length > 0 && allPlayers.every((p) => p.currentQuestionIndex >= QUESTIONS.length)
 
-  if (allPlayersComplete && allPlayers.length > 0) {
+  if (allPlayersComplete) {
     return <GameOver players={allPlayers} onPlayAgain={handleReset} />
   }
 
