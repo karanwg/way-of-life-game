@@ -101,15 +101,12 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
     try {
-      if (wasCorrect) {
-        setShowDice(true)
-        setIsRolling(true)
-        setDiceValue(null)
-      }
-
       const result = await onNextQuestion(wasCorrect)
 
+      // Only show dice animation if we actually got a die roll
       if (wasCorrect && result.dieRoll !== null) {
+        setShowDice(true)
+        setIsRolling(true)
         setDiceValue(result.dieRoll)
 
         // Wait for dice animation to complete
@@ -125,6 +122,10 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
           }, 1000)
         }, 700)
       } else {
+        // No dice roll (wrong answer or skipped due to debuff)
+        setShowDice(false)
+        setIsRolling(false)
+        setDiceValue(null)
         setFeedback(null)
         setTimerActive(true)
         setIsLocked(false)
@@ -133,6 +134,7 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
       console.error("Error advancing to next question:", error)
       setShowDice(false)
       setIsRolling(false)
+      setDiceValue(null)
       setIsLocked(false)
     }
   }
