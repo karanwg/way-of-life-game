@@ -139,6 +139,21 @@ export function advanceQuestion(playerId: string): {
   return { dieRoll, tileEvent }
 }
 
+export function advanceQuestionNoMove(playerId: string): {
+  dieRoll: number | null
+  tileEvent: null
+} | null {
+  const player = gameState.players.get(playerId)
+  if (!player) return null
+
+  // Just advance the question index, no dice roll or tile movement
+  player.currentQuestionIndex += 1
+  player.answered = false
+  player.selectedAnswer = null
+
+  return { dieRoll: null, tileEvent: null }
+}
+
 export function resetGameState(): void {
   gameState = {
     players: new Map(),

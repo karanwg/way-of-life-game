@@ -10,7 +10,7 @@ import type { EventCardData } from "./event-card"
 interface QuizScreenProps {
   player: Player
   onAnswer: (questionIndex: number, answerIndex: number) => Promise<void>
-  onNextQuestion: () => Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }>
+  onNextQuestion: (wasCorrect: boolean) => Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }>
 }
 
 export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps) {
@@ -23,6 +23,8 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
   const [diceValue, setDiceValue] = useState<number | null>(null)
   const [isRolling, setIsRolling] = useState(false)
   const [showDice, setShowDice] = useState(false)
+  const [lastAnswerCorrect, setLastAnswerCorrect] = useState(false)
+  const [isLocked, setIsLocked] = useState(false)
   const feedbackRef = useRef<NodeJS.Timeout | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -31,22 +33,25 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
 
   const handleTimeExpired = useCallback(() => {
     setTimerActive(false)
+    setLastAnswerCorrect(false)
     setFeedback({
       correct: false,
       message: "Time expired! -50 coins",
     })
-
-    timeoutRef.current = setTimeout(() => {
-      handleNextQuestion()
-    }, 1500)
   }, [])
 
   useEffect(() => {
     if (!feedback) return
 
+    const delay = feedback.correct ? 1500 : 5000
+
+    if (!feedback.correct) {
+      setIsLocked(true)
+    }
+
     feedbackRef.current = setTimeout(() => {
-      handleNextQuestion()
-    }, 1500)
+      handleNextQuestion(feedback.correct)
+    }, delay)
 
     return () => {
       if (feedbackRef.current) clearTimeout(feedbackRef.current)
@@ -54,7 +59,7 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
   }, [feedback])
 
   const handleSelectAnswer = async (answerIndex: number) => {
-    if (isAnswering || !timerActive || player.answered) return
+    if (isAnswering || !timerActive || player.answered || feedback !== null) return
 
     setIsAnswering(true)
     setTimerActive(false)
@@ -74,12 +79,14 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
       if (!response.ok) throw new Error("Failed to submit answer")
 
       const data = await response.json()
+      setLastAnswerCorrect(data.correct)
       setFeedback({
         correct: data.correct,
         message: data.correct ? `Correct! +100 coins` : `Wrong! -50 coins`,
       })
     } catch (error) {
       console.error("Error submitting answer:", error)
+      setLastAnswerCorrect(false)
       setFeedback({
         correct: false,
         message: "Error submitting answer",
@@ -89,39 +96,44 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
     }
   }
 
-  const handleNextQuestion = async () => {
+  const handleNextQuestion = async (wasCorrect: boolean) => {
     if (feedbackRef.current) clearTimeout(feedbackRef.current)
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
     try {
-      // Show dice rolling
-      setShowDice(true)
-      setIsRolling(true)
-      setDiceValue(null)
-
-      const result = await onNextQuestion()
-
-      // Set the actual dice value after animation
-      if (result.dieRoll !== null) {
-        setDiceValue(result.dieRoll)
+      if (wasCorrect) {
+        setShowDice(true)
+        setIsRolling(true)
+        setDiceValue(null)
       }
 
-      // Wait for dice animation to complete
-      setTimeout(() => {
-        setIsRolling(false)
+      const result = await onNextQuestion(wasCorrect)
 
-        // Hide dice and reset for next question
+      if (wasCorrect && result.dieRoll !== null) {
+        setDiceValue(result.dieRoll)
+
+        // Wait for dice animation to complete
         setTimeout(() => {
-          setShowDice(false)
-          setDiceValue(null)
-          setFeedback(null)
-          setTimerActive(true)
-        }, 1000)
-      }, 700)
+          setIsRolling(false)
+
+          setTimeout(() => {
+            setShowDice(false)
+            setDiceValue(null)
+            setFeedback(null)
+            setTimerActive(true)
+            setIsLocked(false)
+          }, 1000)
+        }, 700)
+      } else {
+        setFeedback(null)
+        setTimerActive(true)
+        setIsLocked(false)
+      }
     } catch (error) {
       console.error("Error advancing to next question:", error)
       setShowDice(false)
       setIsRolling(false)
+      setIsLocked(false)
     }
   }
 
@@ -147,7 +159,6 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
     )
   }
 
-  // Answer button colors
   const buttonColors = [
     "from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 border-red-400",
     "from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 border-blue-400",
@@ -209,7 +220,7 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
           <button
             key={index}
             onClick={() => handleSelectAnswer(index)}
-            disabled={isAnswering || !timerActive || player.answered || feedback !== null}
+            disabled={isAnswering || !timerActive || player.answered || feedback !== null || isLocked}
             className={`
               relative rounded-xl border-2 p-2
               bg-gradient-to-br ${buttonColors[index]}
@@ -243,6 +254,7 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
         >
           <span className="mr-2">{feedback.correct ? "✅" : "❌"}</span>
           {feedback.message}
+          {!feedback.correct && isLocked && <span className="ml-2 text-red-300 text-xs">(locked for 5s)</span>}
         </div>
       )}
     </div>

@@ -5,6 +5,7 @@ import {
   addPlayer,
   updatePlayerAnswer,
   advanceQuestion,
+  advanceQuestionNoMove, // Import new function
   resetGameState,
   getPlayer,
   getAllPlayers,
@@ -14,7 +15,7 @@ import { QUESTIONS } from "@/lib/questions"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, playerName, playerId, questionIndex, answerIndex } = body
+    const { action, playerName, playerId, questionIndex, answerIndex, wasCorrect } = body
 
     if (action === "join") {
       const newPlayerId = randomUUID()
@@ -52,7 +53,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "next-question") {
-      const result = advanceQuestion(playerId)
+      let result
+      if (wasCorrect === false) {
+        result = advanceQuestionNoMove(playerId)
+      } else {
+        result = advanceQuestion(playerId)
+      }
       const player = getPlayer(playerId)
       return NextResponse.json({
         success: true,

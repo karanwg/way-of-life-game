@@ -63,7 +63,9 @@ export default function Home() {
     // Answer is submitted in quiz-screen
   }
 
-  const handleNextQuestion = async (): Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }> => {
+  const handleNextQuestion = async (
+    wasCorrect: boolean,
+  ): Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }> => {
     if (!playerId) return { dieRoll: null, tileEvent: null }
 
     try {
@@ -73,6 +75,7 @@ export default function Home() {
         body: JSON.stringify({
           action: "next-question",
           playerId,
+          wasCorrect, // Pass wasCorrect to backend
         }),
       })
 
@@ -81,8 +84,8 @@ export default function Home() {
       const data = await response.json()
       setCurrentPlayer(data.player)
 
-      // Show tile event card after dice animation
-      if (data.tileEvent) {
+      // Show tile event card after dice animation (only if correct answer)
+      if (data.tileEvent && wasCorrect) {
         setTimeout(() => {
           setEventCard(data.tileEvent)
         }, 1500)
