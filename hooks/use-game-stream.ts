@@ -42,7 +42,7 @@ export function useGameStream(onEvent: (event: GameEvent) => void) {
     }
 
     poll()
-    pollInterval = setInterval(poll, 500)
+    pollInterval = setInterval(poll, 3000)
 
     return () => {
       isActive = false
