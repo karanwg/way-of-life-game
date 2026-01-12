@@ -4,11 +4,27 @@ import { QUESTIONS } from "./questions"
 import { getTileById } from "./board-tiles"
 import { processTileEffect, rollDie, movePlayerForward } from "./board-logic"
 
-export const gameEventEmitter = new EventEmitter()
-
-let gameState: GameState = {
-  players: new Map(),
+// Extend globalThis to include our game state (persists across hot reloads in dev)
+declare global {
+  // eslint-disable-next-line no-var
+  var __gameState: GameState | undefined
+  // eslint-disable-next-line no-var
+  var __gameEventEmitter: EventEmitter | undefined
 }
+
+// Use globalThis to persist state across hot reloads in development
+if (!globalThis.__gameState) {
+  globalThis.__gameState = {
+    players: new Map(),
+  }
+}
+
+if (!globalThis.__gameEventEmitter) {
+  globalThis.__gameEventEmitter = new EventEmitter()
+}
+
+export const gameEventEmitter = globalThis.__gameEventEmitter
+const gameState = globalThis.__gameState
 
 export function getGameState(): GameState {
   return gameState
@@ -167,9 +183,7 @@ export function advanceQuestionNoMove(playerId: string): {
 }
 
 export function resetGameState(): void {
-  gameState = {
-    players: new Map(),
-  }
+  gameState.players.clear()
   const event: GameEvent = {
     type: "GAME_RESET",
   }

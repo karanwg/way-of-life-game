@@ -60,7 +60,7 @@ export function Board({ players, currentPlayerId }: BoardProps) {
   }
 
   return (
-    <div className="w-full h-full relative bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 rounded-2xl overflow-hidden p-2">
+    <div className="w-full h-full relative bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 rounded-2xl p-2">
       {/* Starfield background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(50)].map((_, i) => (
