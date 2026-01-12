@@ -6,6 +6,7 @@ import { QuizScreen } from "@/components/quiz-screen"
 import { Leaderboard } from "@/components/leaderboard"
 import { Board } from "@/components/board"
 import { EventCard, type EventCardData } from "@/components/event-card"
+import { LapBonusToast, type LapBonusData } from "@/components/lap-bonus-toast"
 import { GameOver } from "@/components/game-over"
 import { useGameStream } from "@/hooks/use-game-stream"
 import type { Player, GameEvent } from "@/lib/types"
@@ -18,6 +19,7 @@ export default function Home() {
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
   const [eventCard, setEventCard] = useState<EventCardData | null>(null)
+  const [lapBonus, setLapBonus] = useState<LapBonusData | null>(null)
   const [isRestoring, setIsRestoring] = useState(true)
 
   // Try to restore session from localStorage on mount
@@ -151,6 +153,13 @@ export default function Home() {
         setCurrentPlayer(data.player)
       }
 
+      // Show lap bonus toast after dice animation (only if correct answer)
+      if (data.lapBonus && wasCorrect) {
+        setTimeout(() => {
+          setLapBonus(data.lapBonus)
+        }, 1200)
+      }
+
       // Show tile event card after dice animation (only if correct answer)
       if (data.tileEvent && wasCorrect) {
         setTimeout(() => {
@@ -234,6 +243,9 @@ export default function Home() {
 
       {/* Event Card Overlay */}
       <EventCard event={eventCard} onDismiss={() => setEventCard(null)} />
+
+      {/* Lap Bonus Toast */}
+      <LapBonusToast data={lapBonus} onDismiss={() => setLapBonus(null)} />
     </div>
   )
 }

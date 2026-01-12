@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
         nextQuestionIndex: player?.currentQuestionIndex,
         dieRoll: result?.dieRoll ?? null,
         tileEvent: result?.tileEvent ?? null,
+        lapBonus: result?.lapBonus ?? null,
       })
     }
 

@@ -12,8 +12,6 @@ interface BoardProps {
 // Get tile-specific colors based on effect
 function getTileColors(effect: string, coins?: number) {
   switch (effect) {
-    case "lap_complete":
-      return { bg: "from-emerald-500/80 to-green-600/80", border: "border-emerald-400/50", icon: "🏁" }
     case "none":
       return coins === 0
         ? { bg: "from-slate-500/80 to-slate-600/80", border: "border-slate-400/50", icon: "🌀" }
@@ -173,10 +171,6 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                   {tile.coins > 0 ? "+" : ""}
                   {tile.coins}
                 </div>
-              )}
-
-              {tile.lapBonus && (
-                <div className="text-sm font-bold text-center mt-1 text-yellow-300">+{tile.lapBonus}</div>
               )}
 
               {/* Player pawns on this tile */}

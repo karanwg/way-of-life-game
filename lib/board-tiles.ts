@@ -7,7 +7,6 @@ export type TileEffect =
   | "coins_global"
   | "debuff_skip_next"
   | "next_die_cap"
-  | "lap_complete"
 
 export interface Tile {
   id: number
@@ -21,18 +20,16 @@ export interface Tile {
   global_coins_from_others?: number
   global_coins_to_others?: number
   die_max?: number
-  lapBonus?: number
 }
 
 export const TILES: Tile[] = [
   {
     id: 0,
     name: "Spawn",
-    effect: "lap_complete",
+    effect: "none",
     coins: 0,
     movement: 0,
-    text: "You completed a lap! Here's your reward.",
-    lapBonus: 300,
+    text: "Back where it all began. Nothing special here.",
   },
   {
     id: 1,

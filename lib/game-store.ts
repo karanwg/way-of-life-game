@@ -58,15 +58,19 @@ export function updatePlayerAnswer(
   return { correct, newCoins: player.coins }
 }
 
+const LAP_BONUS_AMOUNT = 300
+
 export function advanceQuestion(playerId: string): {
   dieRoll: number | null
   tileEvent: { tileName: string; tileText: string; coinsDelta: number; isGlobal: boolean } | null
+  lapBonus: { lapsCompleted: number; coinsAwarded: number } | null
 } | null {
   const player = gameState.players.get(playerId)
   if (!player) return null
 
   let dieRoll: number | null = null
   let tileEvent: { tileName: string; tileText: string; coinsDelta: number; isGlobal: boolean } | null = null
+  let lapBonus: { lapsCompleted: number; coinsAwarded: number } | null = null
 
   if (player.skippedNextQuestion) {
     player.skippedNextQuestion = false
@@ -83,12 +87,17 @@ export function advanceQuestion(playerId: string): {
 
     if (passedSpawn) {
       player.lapsCompleted += 1
+      player.coins += LAP_BONUS_AMOUNT
+      lapBonus = {
+        lapsCompleted: player.lapsCompleted,
+        coinsAwarded: LAP_BONUS_AMOUNT,
+      }
     }
 
     player.currentTileId = newTileId
     const tile = getTileById(newTileId)
     if (tile) {
-      const tileResult = processTileEffect(player, tile, gameState.players, false)
+      const tileResult = processTileEffect(player, tile, gameState.players)
 
       player.coins += tileResult.coinsDelta
 
@@ -139,7 +148,7 @@ export function advanceQuestion(playerId: string): {
   player.answered = false
   player.selectedAnswer = null
 
-  return { dieRoll, tileEvent }
+  return { dieRoll, tileEvent, lapBonus }
 }
 
 export function advanceQuestionNoMove(playerId: string): {

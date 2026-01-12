@@ -20,7 +20,6 @@ export function processTileEffect(
   player: Player,
   tile: Tile,
   allPlayers: Map<string, Player>,
-  isFirstLanding = false,
 ): TileEffectResult {
   const result: TileEffectResult = {
     coinsDelta: tile.coins || 0,
@@ -32,17 +31,6 @@ export function processTileEffect(
 
     case "coins":
       // Simple coin award or deduction
-      break
-
-    case "lap_complete":
-      if (isFirstLanding) {
-        // At game start, don't show any message or give bonus
-        result.skipEvent = true
-        result.coinsDelta = 0
-      } else {
-        // Give lap bonus when landing on Spawn after a lap
-        result.coinsDelta = tile.lapBonus || 300
-      }
       break
 
     case "teleport":
