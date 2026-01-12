@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect, useRef } from "react"
 import { CountdownTimer } from "./countdown-timer"
-import { DiceRoller } from "./dice-roller"
 import { QUESTIONS } from "@/lib/questions"
 import type { Player } from "@/lib/types"
 import type { EventCardData } from "./event-card"
@@ -11,18 +10,16 @@ interface QuizScreenProps {
   player: Player
   onAnswer: (questionIndex: number, answerIndex: number) => Promise<void>
   onNextQuestion: (wasCorrect: boolean) => Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }>
+  onDiceRoll?: (dieRoll: number | null, isRolling: boolean) => void
 }
 
-export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps) {
+export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll }: QuizScreenProps) {
   const [isAnswering, setIsAnswering] = useState(false)
   const [feedback, setFeedback] = useState<{
     correct: boolean
     message: string
   } | null>(null)
   const [timerActive, setTimerActive] = useState(true)
-  const [diceValue, setDiceValue] = useState<number | null>(null)
-  const [isRolling, setIsRolling] = useState(false)
-  const [showDice, setShowDice] = useState(false)
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const feedbackRef = useRef<NodeJS.Timeout | null>(null)
@@ -105,17 +102,15 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
 
       // Only show dice animation if we actually got a die roll
       if (wasCorrect && result.dieRoll !== null) {
-        setShowDice(true)
-        setIsRolling(true)
-        setDiceValue(result.dieRoll)
+        // Notify parent to show dice on board
+        onDiceRoll?.(result.dieRoll, true)
 
         // Wait for dice animation to complete
         setTimeout(() => {
-          setIsRolling(false)
+          onDiceRoll?.(result.dieRoll, false)
 
           setTimeout(() => {
-            setShowDice(false)
-            setDiceValue(null)
+            onDiceRoll?.(null, false)
             setFeedback(null)
             setTimerActive(true)
             setIsLocked(false)
@@ -123,18 +118,14 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
         }, 700)
       } else {
         // No dice roll (wrong answer or skipped due to debuff)
-        setShowDice(false)
-        setIsRolling(false)
-        setDiceValue(null)
+        onDiceRoll?.(null, false)
         setFeedback(null)
         setTimerActive(true)
         setIsLocked(false)
       }
     } catch (error) {
       console.error("Error advancing to next question:", error)
-      setShowDice(false)
-      setIsRolling(false)
-      setDiceValue(null)
+      onDiceRoll?.(null, false)
       setIsLocked(false)
     }
   }
@@ -170,18 +161,6 @@ export function QuizScreen({ player, onAnswer, onNextQuestion }: QuizScreenProps
 
   return (
     <div className="flex flex-col h-full gap-2 relative">
-      {/* Dice overlay when rolling */}
-      {showDice && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex items-center justify-center rounded-xl">
-          <div className="text-center">
-            <DiceRoller value={diceValue} isRolling={isRolling} />
-            {!isRolling && diceValue !== null && (
-              <p className="text-white mt-2 text-sm animate-bounce-in">Moving {diceValue} spaces!</p>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Progress bar */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">

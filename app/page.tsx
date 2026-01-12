@@ -5,6 +5,7 @@ import { NameEntry } from "@/components/name-entry"
 import { QuizScreen } from "@/components/quiz-screen"
 import { Leaderboard } from "@/components/leaderboard"
 import { Board } from "@/components/board"
+import { DiceRoller } from "@/components/dice-roller"
 import { EventCard, type EventCardData } from "@/components/event-card"
 import { LapBonusToast, type LapBonusData } from "@/components/lap-bonus-toast"
 import { GameOver } from "@/components/game-over"
@@ -21,6 +22,10 @@ export default function Home() {
   const [eventCard, setEventCard] = useState<EventCardData | null>(null)
   const [lapBonus, setLapBonus] = useState<LapBonusData | null>(null)
   const [isRestoring, setIsRestoring] = useState(true)
+  const [diceState, setDiceState] = useState<{ value: number | null; isRolling: boolean }>({
+    value: null,
+    isRolling: false,
+  })
 
   // Try to restore session from localStorage on mount
   useEffect(() => {
@@ -130,6 +135,10 @@ export default function Home() {
     // Answer is submitted in quiz-screen
   }
 
+  const handleDiceRoll = useCallback((value: number | null, isRolling: boolean) => {
+    setDiceState({ value, isRolling })
+  }, [])
+
   const handleNextQuestion = async (
     wasCorrect: boolean,
   ): Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }> => {
@@ -224,8 +233,22 @@ export default function Home() {
       {/* Top section - 65% height: Board + Leaderboard */}
       <div className="flex gap-3 p-3" style={{ height: "65%" }}>
         {/* Board - 75% width */}
-        <div className="h-full" style={{ width: "75%" }}>
+        <div className="h-full relative" style={{ width: "75%" }}>
           <Board players={allPlayers} currentPlayerId={playerId} />
+
+          {/* Dice overlay on board */}
+          {diceState.value !== null && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 flex items-center justify-center rounded-2xl">
+              <div className="text-center">
+                <DiceRoller value={diceState.value} isRolling={diceState.isRolling} />
+                {!diceState.isRolling && diceState.value !== null && (
+                  <p className="text-white mt-3 text-lg font-semibold animate-bounce-in">
+                    Moving {diceState.value} {diceState.value === 1 ? "space" : "spaces"}!
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Leaderboard - 25% width */}
@@ -237,7 +260,7 @@ export default function Home() {
       {/* Bottom section - 35% height: Quiz */}
       <div className="flex-1 p-3 pt-0" style={{ height: "35%" }}>
         <div className="h-full bg-gradient-to-br from-purple-900/50 to-indigo-900/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-3 overflow-hidden">
-          <QuizScreen player={currentPlayer} onAnswer={handleAnswer} onNextQuestion={handleNextQuestion} />
+          <QuizScreen player={currentPlayer} onAnswer={handleAnswer} onNextQuestion={handleNextQuestion} onDiceRoll={handleDiceRoll} />
         </div>
       </div>
 
