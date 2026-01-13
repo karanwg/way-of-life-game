@@ -2,7 +2,7 @@
 
 import type { Player } from "@/lib/types"
 import { TILES } from "@/lib/board-tiles"
-import { PlayerPawn } from "@/components/player-pawn"
+import { AnimatedPawn } from "@/components/animated-pawn"
 
 interface BoardProps {
   players: Player[]
@@ -40,10 +40,6 @@ function getTileColors(effect: string, coins?: number) {
 }
 
 export function Board({ players, currentPlayerId }: BoardProps) {
-  const getPlayersOnTile = (tileId: number): Player[] => {
-    return players.filter((p) => p.currentTileId === tileId)
-  }
-
   // Calculate elliptical positions for 12 tiles
   const getTilePosition = (index: number) => {
     const angle = (index / 12) * 2 * Math.PI - Math.PI / 2 // Start from top
@@ -116,8 +112,9 @@ export function Board({ players, currentPlayerId }: BoardProps) {
       {/* Tiles */}
       {TILES.map((tile, index) => {
         const pos = getTilePosition(index)
-        const playersHere = getPlayersOnTile(tile.id)
-        const isCurrentPlayerHere = playersHere.some((p) => p.id === currentPlayerId)
+        const isCurrentPlayerHere = players.some(
+          (p) => p.id === currentPlayerId && p.currentTileId === tile.id
+        )
         const colors = getTileColors(tile.effect, tile.coins)
 
         return (
@@ -172,30 +169,20 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                   {tile.coins}
                 </div>
               )}
-
-              {/* Player pawns on this tile */}
-              {playersHere.length > 0 && (
-                <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 flex gap-1">
-                  {playersHere.slice(0, 4).map((player) => (
-                    <PlayerPawn
-                      key={player.id}
-                      player={player}
-                      playerIndex={getPlayerIndex(player.id)}
-                      isCurrentPlayer={player.id === currentPlayerId}
-                      size="sm"
-                    />
-                  ))}
-                  {playersHere.length > 4 && (
-                    <div className="text-xs font-bold text-white bg-black/60 px-1 rounded">
-                      +{playersHere.length - 4}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         )
       })}
+
+      {/* Animated Player Pawns */}
+      {players.map((player) => (
+        <AnimatedPawn
+          key={player.id}
+          player={player}
+          playerIndex={getPlayerIndex(player.id)}
+          isCurrentPlayer={player.id === currentPlayerId}
+        />
+      ))}
     </div>
   )
 }

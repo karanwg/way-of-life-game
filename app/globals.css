@@ -248,12 +248,17 @@
   }
 
   @keyframes pawn-hop {
-    0%,
-    100% {
+    0% {
       transform: translateY(0) scale(1);
     }
-    50% {
-      transform: translateY(-15px) scale(1.1);
+    30% {
+      transform: translateY(-20px) scale(1.15);
+    }
+    60% {
+      transform: translateY(-18px) scale(1.1);
+    }
+    100% {
+      transform: translateY(0) scale(1);
     }
   }
 
@@ -296,6 +301,6 @@
   }
 
   .animate-pawn-hop {
-    animation: pawn-hop 0.4s ease-out;
+    animation: pawn-hop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 }
