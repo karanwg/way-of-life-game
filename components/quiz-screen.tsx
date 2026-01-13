@@ -63,32 +63,17 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
     setTimerActive(false)
 
     try {
-      const response = await fetch("/api/game", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "answer",
-          playerId: player.id,
-          questionIndex: player.currentQuestionIndex,
-          answerIndex,
-        }),
-      })
+      // Check answer correctness locally
+      const question = QUESTIONS[player.currentQuestionIndex]
+      const correct = question ? answerIndex === question.correctAnswerIndex : false
 
-      const data = await response.json()
+      // Submit answer via P2P
+      await onAnswer(player.currentQuestionIndex, answerIndex)
 
-      // Check if session expired (player not found on server)
-      if (!response.ok) {
-        if (data.error?.includes("not found")) {
-          onSessionExpired?.()
-          return
-        }
-        throw new Error("Failed to submit answer")
-      }
-
-      setLastAnswerCorrect(data.correct)
+      setLastAnswerCorrect(correct)
       setFeedback({
-        correct: data.correct,
-        message: data.correct ? `Correct! +100 coins` : `Wrong! -50 coins`,
+        correct,
+        message: correct ? `Correct! +100 coins` : `Wrong! -50 coins`,
       })
     } catch (error) {
       console.error("Error submitting answer:", error)
@@ -97,6 +82,7 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
         correct: false,
         message: "Error submitting answer. Please refresh.",
       })
+      onSessionExpired?.()
     } finally {
       setIsAnswering(false)
     }
