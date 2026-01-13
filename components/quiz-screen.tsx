@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { CountdownTimer } from "./countdown-timer"
 import { QUESTIONS } from "@/lib/questions"
+import { playLoseMoneySound } from "@/lib/sounds"
 import type { Player } from "@/lib/types"
 import type { EventCardData } from "./event-card"
 
@@ -32,6 +33,7 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
   const handleTimeExpired = useCallback(() => {
     setTimerActive(false)
     setLastAnswerCorrect(false)
+    playLoseMoneySound()
     setFeedback({
       correct: false,
       message: "Time expired! -50 coins",
@@ -69,6 +71,11 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
 
       // Submit answer via P2P
       await onAnswer(player.currentQuestionIndex, answerIndex)
+
+      // Play sound effect only for wrong answers (cha-ching is for chance-based gains only)
+      if (!correct) {
+        playLoseMoneySound()
+      }
 
       setLastAnswerCorrect(correct)
       setFeedback({

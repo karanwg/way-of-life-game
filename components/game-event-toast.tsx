@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import type { HeistResultData, PonziResultData, PoliceResultData, IdentityTheftResultData } from "@/lib/p2p-types"
+import { playChaChingSound, playLoseMoneySound } from "@/lib/sounds"
 
 interface GameEventToastProps {
   heistResult?: HeistResultData | null
@@ -33,6 +34,38 @@ export function GameEventToast({
   useEffect(() => {
     if (hasRelevantEvent) {
       setIsVisible(true)
+      
+      // Play appropriate sound
+      if (isMyHeist && heistResult) {
+        if (heistResult.thiefName === myPlayerName) {
+          playChaChingSound() // I stole money
+        } else {
+          playLoseMoneySound() // I got robbed
+        }
+      } else if (isMyPonzi && ponziResult && ponziResult.invested) {
+        if (ponziResult.won) {
+          playChaChingSound()
+        } else {
+          playLoseMoneySound()
+        }
+      } else if (isMyPolice && policeResult) {
+        if (policeResult.victimName === myPlayerName) {
+          playLoseMoneySound() // I got snitched on
+        }
+      } else if (isMyIdentityTheft && identityTheftResult) {
+        const myNewCoins = identityTheftResult.player1Name === myPlayerName 
+          ? identityTheftResult.player1NewCoins 
+          : identityTheftResult.player2NewCoins
+        const myOldCoins = identityTheftResult.player1Name === myPlayerName 
+          ? identityTheftResult.player1OldCoins 
+          : identityTheftResult.player2OldCoins
+        if (myNewCoins > myOldCoins) {
+          playChaChingSound()
+        } else {
+          playLoseMoneySound()
+        }
+      }
+      
       const timer = setTimeout(() => {
         setIsVisible(false)
         setTimeout(onDismiss, 300)
@@ -42,7 +75,7 @@ export function GameEventToast({
       // Dismiss immediately if not relevant to me
       onDismiss()
     }
-  }, [hasRelevantEvent, onDismiss])
+  }, [hasRelevantEvent, onDismiss, isMyHeist, heistResult, isMyPonzi, ponziResult, isMyPolice, policeResult, isMyIdentityTheft, identityTheftResult, myPlayerName])
 
   if (!hasRelevantEvent) return null
 

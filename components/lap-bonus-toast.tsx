@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { playChaChingSound } from "@/lib/sounds"
 
 export interface LapBonusData {
   lapsCompleted: number
@@ -18,6 +19,7 @@ export function LapBonusToast({ data, onDismiss }: LapBonusToastProps) {
   useEffect(() => {
     if (data) {
       setIsVisible(true)
+      playChaChingSound()
 
       // Auto dismiss after 3 seconds
       const dismissTimer = setTimeout(() => {

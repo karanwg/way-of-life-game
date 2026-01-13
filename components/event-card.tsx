@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { X, Coins, Zap, Shuffle, Briefcase } from "lucide-react"
+import { playChaChingSound, playLoseMoneySound } from "@/lib/sounds"
 
 export interface EventCardData {
   tileName: string
@@ -114,6 +115,13 @@ export function EventCard({ event, onDismiss }: EventCardProps) {
     if (event) {
       setIsVisible(true)
       setShowCoins(false)
+
+      // Play sound based on coin change
+      if (event.coinsDelta > 0) {
+        playChaChingSound()
+      } else if (event.coinsDelta < 0) {
+        playLoseMoneySound()
+      }
 
       // Delay coin animation
       const coinTimer = setTimeout(() => setShowCoins(true), 300)
