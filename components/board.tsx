@@ -13,27 +13,19 @@ interface BoardProps {
 function getTileColors(effect: string, coins?: number) {
   switch (effect) {
     case "none":
-      return coins === 0
-        ? { bg: "from-slate-500/80 to-slate-600/80", border: "border-slate-400/50", icon: "🌀" }
-        : { bg: "from-emerald-500/80 to-emerald-600/80", border: "border-emerald-400/50", icon: "🎁" }
+      return { bg: "from-slate-500/80 to-slate-600/80", border: "border-slate-400/50", icon: "🌀" }
     case "coins":
       return coins && coins > 0
         ? { bg: "from-yellow-400/80 to-amber-500/80", border: "border-yellow-300/50", icon: "💰" }
         : { bg: "from-red-500/80 to-rose-600/80", border: "border-red-400/50", icon: "💸" }
-    case "teleport":
-      return { bg: "from-purple-500/80 to-violet-600/80", border: "border-purple-400/50", icon: "🌀" }
-    case "teleport_random":
-      return { bg: "from-indigo-500/80 to-purple-600/80", border: "border-indigo-400/50", icon: "🎲" }
-    case "move_and_coins":
-      return { bg: "from-orange-500/80 to-red-600/80", border: "border-orange-400/50", icon: "👟" }
-    case "coins_global":
-      return coins && coins < 0
-        ? { bg: "from-pink-500/80 to-rose-600/80", border: "border-pink-400/50", icon: "💔" }
-        : { bg: "from-pink-400/80 to-fuchsia-500/80", border: "border-pink-300/50", icon: "💍" }
-    case "debuff_skip_next":
+    case "heist_light":
+      return { bg: "from-orange-500/80 to-red-600/80", border: "border-orange-400/50", icon: "🎭" }
+    case "heist_heavy":
+      return { bg: "from-red-600/80 to-rose-700/80", border: "border-red-500/50", icon: "🔫" }
+    case "ponzi":
+      return { bg: "from-purple-500/80 to-pink-600/80", border: "border-purple-400/50", icon: "🎰" }
+    case "jail":
       return { bg: "from-gray-600/80 to-slate-700/80", border: "border-gray-500/50", icon: "⛓️" }
-    case "next_die_cap":
-      return { bg: "from-cyan-500/80 to-teal-600/80", border: "border-cyan-400/50", icon: "📋" }
     default:
       return { bg: "from-slate-500/80 to-slate-600/80", border: "border-slate-400/50", icon: "❓" }
   }

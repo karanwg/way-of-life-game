@@ -7,8 +7,7 @@ export type Player = {
   selectedAnswer: number | null
   currentTileId: number
   lapsCompleted: number
-  skippedNextQuestion: boolean
-  nextRolledMax: number | null
+  hasJailDebuff: boolean // Next correct answer skips movement
 }
 
 export type Question = {

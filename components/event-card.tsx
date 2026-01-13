@@ -18,8 +18,30 @@ interface EventCardProps {
 
 // Get icon and colors based on event type
 function getEventStyle(coinsDelta: number, tileName: string) {
-  // Special tiles
-  if (tileName.includes("Jail") || tileName.includes("Cancelled")) {
+  // Heist tiles
+  if (tileName.includes("Heist")) {
+    return {
+      icon: Zap,
+      bg: "from-red-600 to-orange-700",
+      border: "border-red-400",
+      iconBg: "bg-red-500",
+      emoji: tileName.includes("Heavy") ? "🔫" : "🎭",
+    }
+  }
+  
+  // Ponzi scheme
+  if (tileName.includes("Ponzi")) {
+    return {
+      icon: Shuffle,
+      bg: "from-purple-600 to-pink-700",
+      border: "border-purple-400",
+      iconBg: "bg-purple-500",
+      emoji: "🎰",
+    }
+  }
+  
+  // Jail
+  if (tileName.includes("Jail")) {
     return {
       icon: Lock,
       bg: "from-gray-700 to-slate-800",
@@ -28,34 +50,9 @@ function getEventStyle(coinsDelta: number, tileName: string) {
       emoji: "⛓️",
     }
   }
-  if (tileName.includes("Married")) {
-    return {
-      icon: Heart,
-      bg: "from-pink-600 to-rose-700",
-      border: "border-pink-400",
-      iconBg: "bg-pink-500",
-      emoji: "💍",
-    }
-  }
-  if (tileName.includes("Viral")) {
-    return {
-      icon: Zap,
-      bg: "from-orange-600 to-red-700",
-      border: "border-orange-400",
-      iconBg: "bg-orange-500",
-      emoji: "📱",
-    }
-  }
-  if (tileName.includes("Teleport") || tileName.includes("Blacked Out") || tileName.includes("Ohio")) {
-    return {
-      icon: MapPin,
-      bg: "from-purple-600 to-violet-700",
-      border: "border-purple-400",
-      iconBg: "bg-purple-500",
-      emoji: "🌀",
-    }
-  }
-  if (tileName.includes("Random") || tileName.includes("Giveaway")) {
+  
+  // Giveaway / positive coins
+  if (tileName.includes("Giveaway")) {
     return {
       icon: Shuffle,
       bg: "from-yellow-500 to-amber-600",
@@ -64,22 +61,26 @@ function getEventStyle(coinsDelta: number, tileName: string) {
       emoji: "🎁",
     }
   }
-  if (tileName.includes("Internship") || tileName.includes("Grindset")) {
+  
+  // YouTube side hustle
+  if (tileName.includes("YouTube") || tileName.includes("Side Hustle")) {
     return {
-      icon: Briefcase,
-      bg: "from-cyan-600 to-teal-700",
-      border: "border-cyan-400",
-      iconBg: "bg-cyan-500",
-      emoji: "📋",
+      icon: Zap,
+      bg: "from-red-600 to-rose-700",
+      border: "border-red-400",
+      iconBg: "bg-red-500",
+      emoji: "📺",
     }
   }
-  if (tileName.includes("Spawn") || tileName.includes("Birth")) {
+  
+  // Spawn
+  if (tileName.includes("Spawn")) {
     return {
       icon: Zap,
       bg: "from-emerald-600 to-green-700",
       border: "border-emerald-400",
       iconBg: "bg-emerald-500",
-      emoji: "👶",
+      emoji: "🏠",
     }
   }
 
@@ -103,7 +104,7 @@ function getEventStyle(coinsDelta: number, tileName: string) {
     }
   }
 
-  // Neutral
+  // Neutral / safe tiles
   return {
     icon: Zap,
     bg: "from-slate-600 to-gray-700",

@@ -9,8 +9,12 @@ import { DiceRoller } from "@/components/dice-roller"
 import { EventCard, type EventCardData } from "@/components/event-card"
 import { LapBonusToast, type LapBonusData } from "@/components/lap-bonus-toast"
 import { GameOver } from "@/components/game-over"
-import { usePeerGame } from "@/hooks/use-peer-game"
+import { HeistModal } from "@/components/heist-modal"
+import { PonziModal } from "@/components/ponzi-modal"
+import { GameEventToast } from "@/components/game-event-toast"
+import { usePeerGame, type MoveResultForUI } from "@/hooks/use-peer-game"
 import type { Player } from "@/lib/types"
+import type { HeistPromptData, PonziPromptData, HeistResultData, PonziResultData, MarriageResultData } from "@/lib/p2p-types"
 import { QUESTIONS } from "@/lib/questions"
 
 export default function Home() {
@@ -21,6 +25,17 @@ export default function Home() {
     value: null,
     isRolling: false,
   })
+
+  // Interactive prompts
+  const [heistPrompt, setHeistPrompt] = useState<HeistPromptData | null>(null)
+  const [ponziPrompt, setPonziPrompt] = useState<PonziPromptData | null>(null)
+
+  // Event notifications
+  const [heistResult, setHeistResult] = useState<HeistResultData | null>(null)
+  const [ponziResult, setPonziResult] = useState<PonziResultData | null>(null)
+  const [marriageResult, setMarriageResult] = useState<MarriageResultData | null>(null)
+  const [jailApplied, setJailApplied] = useState<string | null>(null)
+  const [skippedDueToJail, setSkippedDueToJail] = useState(false)
 
   const handlePlayersUpdate = useCallback((players: Player[]) => {
     setAllPlayers(players)
@@ -40,6 +55,34 @@ export default function Home() {
     setEventCard(null)
     setLapBonus(null)
     setDiceState({ value: null, isRolling: false })
+    setHeistPrompt(null)
+    setPonziPrompt(null)
+  }, [])
+
+  const handleHeistPrompt = useCallback((data: HeistPromptData) => {
+    setHeistPrompt(data)
+  }, [])
+
+  const handlePonziPrompt = useCallback((data: PonziPromptData) => {
+    setPonziPrompt(data)
+  }, [])
+
+  const handleHeistResult = useCallback((result: HeistResultData) => {
+    setHeistPrompt(null)
+    setHeistResult(result)
+  }, [])
+
+  const handlePonziResult = useCallback((result: PonziResultData) => {
+    setPonziPrompt(null)
+    setPonziResult(result)
+  }, [])
+
+  const handleMarriageEvent = useCallback((result: MarriageResultData) => {
+    setMarriageResult(result)
+  }, [])
+
+  const handleJailApplied = useCallback((playerName: string) => {
+    setJailApplied(playerName)
   }, [])
 
   const {
@@ -51,6 +94,8 @@ export default function Home() {
     startGame,
     submitAnswer,
     advanceQuestion,
+    selectHeistTarget,
+    makePonziChoice,
     resetGame,
     leaveGame,
   } = usePeerGame({
@@ -58,6 +103,12 @@ export default function Home() {
     onError: handleError,
     onHostDisconnected: handleHostDisconnected,
     onGameReset: handleGameReset,
+    onHeistPrompt: handleHeistPrompt,
+    onPonziPrompt: handlePonziPrompt,
+    onHeistResult: handleHeistResult,
+    onPonziResult: handlePonziResult,
+    onMarriageEvent: handleMarriageEvent,
+    onJailApplied: handleJailApplied,
   })
 
   const handleDiceRoll = useCallback((value: number | null, isRolling: boolean) => {
@@ -75,8 +126,12 @@ export default function Home() {
   // Handle next question - returns dice roll and tile event
   const handleNextQuestion = useCallback(
     async (wasCorrect: boolean): Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }> => {
-      // advanceQuestion now returns a Promise with the result directly
       const result = await advanceQuestion(wasCorrect)
+
+      // Handle jail skip notification
+      if (result.skippedDueToJail) {
+        setSkippedDueToJail(true)
+      }
 
       // Handle lap bonus display
       if (result.lapBonus && wasCorrect) {
@@ -85,16 +140,26 @@ export default function Home() {
         }, 1200)
       }
 
-      // Handle tile event display
-      if (result.tileEvent && wasCorrect) {
+      // Handle tile event display (after dice animation)
+      if (result.tileEvent && wasCorrect && !result.skippedDueToJail) {
         setTimeout(() => {
-          setEventCard(result.tileEvent)
+          setEventCard({
+            tileName: result.tileEvent!.tileName,
+            tileText: result.tileEvent!.tileText,
+            coinsDelta: result.tileEvent!.coinsDelta,
+            isGlobal: false,
+          })
         }, 1500)
       }
 
       return {
         dieRoll: result.dieRoll,
-        tileEvent: result.tileEvent,
+        tileEvent: result.tileEvent ? {
+          tileName: result.tileEvent.tileName,
+          tileText: result.tileEvent.tileText,
+          coinsDelta: result.tileEvent.coinsDelta,
+          isGlobal: false,
+        } : null,
       }
     },
     [advanceQuestion]
@@ -111,6 +176,14 @@ export default function Home() {
     }
     leaveGame()
   }, [leaveGame, resetGame, roomState.role])
+
+  const clearEventToasts = useCallback(() => {
+    setHeistResult(null)
+    setPonziResult(null)
+    setMarriageResult(null)
+    setJailApplied(null)
+    setSkippedDueToJail(false)
+  }, [])
 
   // Show lobby if game hasn't started
   if (!roomState.gameStarted) {
@@ -199,6 +272,26 @@ export default function Home() {
 
       {/* Lap Bonus Toast */}
       <LapBonusToast data={lapBonus} onDismiss={() => setLapBonus(null)} />
+
+      {/* Heist Modal */}
+      {heistPrompt && (
+        <HeistModal data={heistPrompt} onSelectTarget={selectHeistTarget} />
+      )}
+
+      {/* Ponzi Modal */}
+      {ponziPrompt && (
+        <PonziModal data={ponziPrompt} onChoice={makePonziChoice} />
+      )}
+
+      {/* Game Event Toast */}
+      <GameEventToast
+        heistResult={heistResult}
+        ponziResult={ponziResult}
+        marriageResult={marriageResult}
+        jailApplied={jailApplied}
+        skippedDueToJail={skippedDueToJail}
+        onDismiss={clearEventToasts}
+      />
     </div>
   )
 }
