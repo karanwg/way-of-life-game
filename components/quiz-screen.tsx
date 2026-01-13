@@ -11,9 +11,10 @@ interface QuizScreenProps {
   onAnswer: (questionIndex: number, answerIndex: number) => Promise<void>
   onNextQuestion: (wasCorrect: boolean) => Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }>
   onDiceRoll?: (dieRoll: number | null, isRolling: boolean) => void
+  onSessionExpired?: () => void
 }
 
-export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll }: QuizScreenProps) {
+export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSessionExpired }: QuizScreenProps) {
   const [isAnswering, setIsAnswering] = useState(false)
   const [feedback, setFeedback] = useState<{
     correct: boolean
@@ -73,9 +74,17 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll }: Qui
         }),
       })
 
-      if (!response.ok) throw new Error("Failed to submit answer")
-
       const data = await response.json()
+
+      // Check if session expired (player not found on server)
+      if (!response.ok) {
+        if (data.error?.includes("not found")) {
+          onSessionExpired?.()
+          return
+        }
+        throw new Error("Failed to submit answer")
+      }
+
       setLastAnswerCorrect(data.correct)
       setFeedback({
         correct: data.correct,
@@ -86,7 +95,7 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll }: Qui
       setLastAnswerCorrect(false)
       setFeedback({
         correct: false,
-        message: "Error submitting answer",
+        message: "Error submitting answer. Please refresh.",
       })
     } finally {
       setIsAnswering(false)

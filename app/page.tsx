@@ -83,6 +83,11 @@ export default function Home() {
     setEventCard(null)
   }, [])
 
+  const handleSessionExpired = useCallback(() => {
+    alert("Your session has expired. Please rejoin the game.")
+    clearSession()
+  }, [clearSession])
+
   const handleGameEvent = useCallback((event: GameEvent) => {
     if (event.type === "GAME_STATE_UPDATE") {
       setAllPlayers(event.players.sort((a, b) => b.coins - a.coins))
@@ -260,7 +265,7 @@ export default function Home() {
       {/* Bottom section - 35% height: Quiz */}
       <div className="flex-1 p-3 pt-0" style={{ height: "35%" }}>
         <div className="h-full bg-gradient-to-br from-purple-900/50 to-indigo-900/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-3 overflow-hidden">
-          <QuizScreen player={currentPlayer} onAnswer={handleAnswer} onNextQuestion={handleNextQuestion} onDiceRoll={handleDiceRoll} />
+          <QuizScreen player={currentPlayer} onAnswer={handleAnswer} onNextQuestion={handleNextQuestion} onDiceRoll={handleDiceRoll} onSessionExpired={handleSessionExpired} />
         </div>
       </div>
 
