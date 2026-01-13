@@ -1,28 +1,26 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import type { HeistResultData, PonziResultData, MarriageResultData } from "@/lib/p2p-types"
+import type { HeistResultData, PonziResultData, PoliceResultData, IdentityTheftResultData } from "@/lib/p2p-types"
 
 interface GameEventToastProps {
   heistResult?: HeistResultData | null
   ponziResult?: PonziResultData | null
-  marriageResult?: MarriageResultData | null
-  jailApplied?: string | null
-  skippedDueToJail?: boolean
+  policeResult?: PoliceResultData | null
+  identityTheftResult?: IdentityTheftResultData | null
   onDismiss: () => void
 }
 
 export function GameEventToast({
   heistResult,
   ponziResult,
-  marriageResult,
-  jailApplied,
-  skippedDueToJail,
+  policeResult,
+  identityTheftResult,
   onDismiss,
 }: GameEventToastProps) {
   const [isVisible, setIsVisible] = useState(false)
 
-  const hasEvent = heistResult || ponziResult || marriageResult || jailApplied || skippedDueToJail
+  const hasEvent = heistResult || ponziResult || policeResult || identityTheftResult
 
   useEffect(() => {
     if (hasEvent) {
@@ -41,7 +39,7 @@ export function GameEventToast({
     if (heistResult) {
       return (
         <div className="flex items-center gap-3">
-          <div className="text-3xl">🔫</div>
+          <div className="text-3xl">💰</div>
           <div>
             <div className="font-bold text-red-400">Heist Complete!</div>
             <div className="text-sm text-gray-300">
@@ -62,7 +60,7 @@ export function GameEventToast({
             <div>
               <div className="font-bold text-gray-400">Skipped the Scheme</div>
               <div className="text-sm text-gray-300">
-                <span className="text-white font-semibold">{ponziResult.playerName}</span> walked away from the ponzi scheme
+                <span className="text-white font-semibold">{ponziResult.playerName}</span> walked away safely
               </div>
             </div>
           </div>
@@ -75,7 +73,7 @@ export function GameEventToast({
           <div className="text-3xl">{won ? "🎉" : "💸"}</div>
           <div>
             <div className={`font-bold ${won ? "text-green-400" : "text-red-400"}`}>
-              Ponzi Scheme: {won ? "Won!" : "Lost!"}
+              {won ? "Jackpot! Coins Doubled!" : "Scheme Collapsed!"}
             </div>
             <div className="text-sm text-gray-300">
               <span className="text-white font-semibold">{ponziResult.playerName}</span>{" "}
@@ -89,46 +87,36 @@ export function GameEventToast({
       )
     }
 
-    if (marriageResult) {
+    if (policeResult) {
       return (
         <div className="flex items-center gap-3">
-          <div className="text-3xl">💒</div>
+          <div className="text-3xl">🚔</div>
           <div>
-            <div className="font-bold text-pink-400">Marriage!</div>
+            <div className="font-bold text-blue-400">Someone Got Snitched On!</div>
             <div className="text-sm text-gray-300">
-              <span className="text-white font-semibold">{marriageResult.player1Name}</span> and{" "}
-              <span className="text-white font-semibold">{marriageResult.player2Name}</span> got married!
+              <span className="text-white font-semibold">{policeResult.snitchName}</span> reported{" "}
+              <span className="text-white font-semibold">{policeResult.victimName}</span>
+            </div>
+            <div className="text-xs text-red-400 mt-1">
+              {policeResult.victimName} lost {policeResult.coinsLost} 🪙
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (identityTheftResult) {
+      return (
+        <div className="flex items-center gap-3">
+          <div className="text-3xl">🎭</div>
+          <div>
+            <div className="font-bold text-purple-400">Identity Theft!</div>
+            <div className="text-sm text-gray-300">
+              <span className="text-white font-semibold">{identityTheftResult.player1Name}</span> and{" "}
+              <span className="text-white font-semibold">{identityTheftResult.player2Name}</span> swapped coins!
             </div>
             <div className="text-xs text-gray-400 mt-1">
-              Pooled {marriageResult.pooledCoins} 🪙 → Each received {marriageResult.eachReceived} 🪙
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    if (jailApplied) {
-      return (
-        <div className="flex items-center gap-3">
-          <div className="text-3xl">⛓️</div>
-          <div>
-            <div className="font-bold text-gray-400">Sent to Jail!</div>
-            <div className="text-sm text-gray-300">
-              <span className="text-white font-semibold">{jailApplied}</span> will skip their next movement
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    if (skippedDueToJail) {
-      return (
-        <div className="flex items-center gap-3">
-          <div className="text-3xl">🔓</div>
-          <div>
-            <div className="font-bold text-green-400">Released from Jail!</div>
-            <div className="text-sm text-gray-300">
-              Movement skipped, but you're free now!
+              {identityTheftResult.player1Name}: {identityTheftResult.player1OldCoins} → {identityTheftResult.player1NewCoins} 🪙
             </div>
           </div>
         </div>
@@ -141,8 +129,8 @@ export function GameEventToast({
   const getBorderColor = () => {
     if (heistResult) return "border-red-500/50"
     if (ponziResult) return ponziResult.won ? "border-green-500/50" : "border-red-500/50"
-    if (marriageResult) return "border-pink-500/50"
-    if (jailApplied || skippedDueToJail) return "border-gray-500/50"
+    if (policeResult) return "border-blue-500/50"
+    if (identityTheftResult) return "border-purple-500/50"
     return "border-purple-500/50"
   }
 

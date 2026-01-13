@@ -1,14 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import type { HeistPromptData } from "@/lib/p2p-types"
+import type { PolicePromptData } from "@/lib/p2p-types"
 
-interface HeistModalProps {
-  data: HeistPromptData
+interface PoliceModalProps {
+  data: PolicePromptData
   onSelectTarget: (targetId: string) => void
 }
 
-export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
+export function PoliceModal({ data, onSelectTarget }: PoliceModalProps) {
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null)
 
   const handleConfirm = () => {
@@ -17,62 +17,26 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
     }
   }
 
-  const getHeistTitle = () => {
-    switch (data.type) {
-      case "10": return "Pickpocket"
-      case "100": return "Quick Heist"
-      case "50": return "Grand Heist"
-      default: return "Heist"
-    }
-  }
-
-  const getHeistDescription = () => {
-    switch (data.type) {
-      case "10": return "Skim 10% off someone's wallet"
-      case "100": return "Take 100 coins from someone"
-      case "50": return "Steal 50% of someone's fortune"
-      default: return "Steal coins from someone"
-    }
-  }
-
-  const getHeistEmoji = () => {
-    switch (data.type) {
-      case "10": return "🤏"
-      case "100": return "🎭"
-      case "50": return "🔫"
-      default: return "💰"
-    }
-  }
-
-  const calculateStealAmount = (targetCoins: number) => {
-    switch (data.type) {
-      case "10": return Math.floor(targetCoins * 0.1)
-      case "100": return Math.min(100, targetCoins)
-      case "50": return Math.floor(targetCoins * 0.5)
-      default: return 0
-    }
-  }
-
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gradient-to-br from-gray-900 to-slate-900 border-2 border-red-500/50 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-bounce-in">
+      <div className="bg-gradient-to-br from-gray-900 to-blue-950 border-2 border-blue-500/50 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-bounce-in">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="text-4xl mb-2">{getHeistEmoji()}</div>
-          <h2 className="text-2xl font-bold text-red-400">
-            {getHeistTitle()}
+          <div className="text-4xl mb-2">🚔</div>
+          <h2 className="text-2xl font-bold text-blue-400">
+            Police Station
           </h2>
           <p className="text-gray-400 mt-2">
-            {getHeistDescription()}
+            Snitch on someone. They lose 300 coins!
           </p>
         </div>
 
         {/* Target Selection */}
         <div className="space-y-2 mb-6">
-          <p className="text-sm text-gray-300 mb-3">Select your target:</p>
+          <p className="text-sm text-gray-300 mb-3">Select who to snitch on:</p>
           {data.availableTargets.map((target) => {
             const isSelected = selectedTarget === target.id
-            const stealAmount = calculateStealAmount(target.coins)
+            const coinsLost = Math.min(300, target.coins)
 
             return (
               <button
@@ -83,7 +47,7 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
                   flex items-center justify-between
                   ${
                     isSelected
-                      ? "border-red-500 bg-red-500/20"
+                      ? "border-blue-500 bg-blue-500/20"
                       : "border-gray-600 bg-gray-800/50 hover:border-gray-500"
                   }
                 `}
@@ -101,7 +65,7 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
                 </div>
                 <div className="text-right">
                   <div className="text-red-400 font-bold">
-                    +{stealAmount} 🪙
+                    -{coinsLost} 🪙
                   </div>
                   {isSelected && (
                     <div className="text-xs text-green-400">Selected</div>
@@ -120,12 +84,12 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
             w-full py-3 rounded-xl font-bold text-lg transition-all
             ${
               selectedTarget
-                ? "bg-gradient-to-r from-red-600 to-orange-600 text-white hover:from-red-500 hover:to-orange-500"
+                ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500"
                 : "bg-gray-700 text-gray-400 cursor-not-allowed"
             }
           `}
         >
-          {selectedTarget ? "Execute Heist 🎯" : "Select a Target"}
+          {selectedTarget ? "Report to Police 🚨" : "Select a Target"}
         </button>
       </div>
     </div>

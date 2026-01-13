@@ -12,11 +12,13 @@ import type {
   HeistResultData,
   PonziPromptData,
   PonziResultData,
-  MarriageResultData,
+  PolicePromptData,
+  PoliceResultData,
+  IdentityTheftResultData,
 } from "@/lib/p2p-types"
 import { P2PGameEngine, type MoveResult } from "@/lib/p2p-game-engine"
 
-// Generate a short room code from peer ID
+// Generate a short room code
 function generateRoomCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
   let code = ""
@@ -26,20 +28,18 @@ function generateRoomCode(): string {
   return code
 }
 
-// Convert room code to peer ID format
 function roomCodeToPeerId(code: string): string {
   return `wayoflife-${code.toUpperCase()}`
 }
 
 export interface MoveResultForUI {
   dieRoll: number | null
-  skippedDueToJail: boolean
   lapBonus: { lapsCompleted: number; coinsAwarded: number } | null
   tileEvent: TileEventData | null
   heistPrompt?: HeistPromptData
   ponziPrompt?: PonziPromptData
-  marriageEvent?: MarriageResultData
-  jailApplied?: boolean
+  policePrompt?: PolicePromptData
+  identityTheftEvent?: IdentityTheftResultData
 }
 
 interface UsePeerGameOptions {
@@ -51,8 +51,9 @@ interface UsePeerGameOptions {
   onHeistResult?: (result: HeistResultData) => void
   onPonziPrompt?: (data: PonziPromptData) => void
   onPonziResult?: (result: PonziResultData) => void
-  onMarriageEvent?: (result: MarriageResultData) => void
-  onJailApplied?: (playerName: string) => void
+  onPolicePrompt?: (data: PolicePromptData) => void
+  onPoliceResult?: (result: PoliceResultData) => void
+  onIdentityTheftEvent?: (result: IdentityTheftResultData) => void
   onGameReset?: () => void
   onError?: (error: string) => void
   onHostDisconnected?: () => void
@@ -73,15 +74,12 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
   const connectionsRef = useRef<Map<string, DataConnection>>(new Map())
   const hostConnectionRef = useRef<DataConnection | null>(null)
   const gameEngineRef = useRef<P2PGameEngine | null>(null)
-
-  // Pending request resolvers for async P2P calls
   const pendingMoveResolverRef = useRef<((result: MoveResultForUI) => void) | null>(null)
   
-  // Refs to keep latest values accessible in event handlers
+  // Refs to avoid stale closures in event handlers
   const myPlayerIdRef = useRef<string | null>(null)
   const optionsRef = useRef(options)
   
-  // Keep refs updated
   useEffect(() => {
     myPlayerIdRef.current = myPlayerId
   }, [myPlayerId])
@@ -90,7 +88,6 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
     optionsRef.current = options
   }, [options])
 
-  // Broadcast message to all connected guests (host only)
   const broadcastToGuests = useCallback((message: HostToGuestMessage) => {
     connectionsRef.current.forEach((conn) => {
       if (conn.open) {
@@ -99,7 +96,6 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
     })
   }, [])
 
-  // Send message to host (guest only)
   const sendToHost = useCallback((message: GuestToHostMessage) => {
     if (hostConnectionRef.current?.open) {
       hostConnectionRef.current.send(message)
@@ -108,7 +104,6 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
     }
   }, [])
 
-  // Helper to update my player from allPlayers - uses ref to avoid stale closure
   const updateMyPlayer = useCallback((allPlayers: Player[]) => {
     const currentPlayerId = myPlayerIdRef.current
     if (currentPlayerId) {
@@ -119,7 +114,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
     }
   }, [])
 
-  // Handle message from guest (host only) - uses refs to avoid stale closures
+  // Handle message from guest (host only)
   const handleGuestMessage = useCallback(
     (message: GuestToHostMessage, conn: DataConnection) => {
       if (!gameEngineRef.current) return
@@ -136,22 +131,11 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           conn.metadata = { playerId }
           connectionsRef.current.set(playerId, conn)
 
-          const acceptMsg: HostToGuestMessage = {
-            type: "JOIN_ACCEPTED",
-            playerId,
-            player,
-            allPlayers,
-          }
-          conn.send(acceptMsg)
-
-          const joinMsg: HostToGuestMessage = {
-            type: "PLAYER_JOINED",
-            player,
-            allPlayers,
-          }
+          conn.send({ type: "JOIN_ACCEPTED", playerId, player, allPlayers })
+          
           connectionsRef.current.forEach((c, id) => {
             if (id !== playerId && c.open) {
-              c.send(joinMsg)
+              c.send({ type: "PLAYER_JOINED", player, allPlayers })
             }
           })
 
@@ -161,21 +145,10 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
         }
 
         case "SUBMIT_ANSWER": {
-          const result = engine.submitAnswer(
-            message.playerId,
-            message.questionIndex,
-            message.answerIndex
-          )
+          const result = engine.submitAnswer(message.playerId, message.questionIndex, message.answerIndex)
           if (result) {
             const allPlayers = engine.getAllPlayers()
-            const resultMsg: HostToGuestMessage = {
-              type: "ANSWER_RESULT",
-              playerId: message.playerId,
-              correct: result.correct,
-              newCoins: result.newCoins,
-              allPlayers,
-            }
-            broadcastToGuests(resultMsg)
+            broadcastToGuests({ type: "ANSWER_RESULT", playerId: message.playerId, correct: result.correct, newCoins: result.newCoins, allPlayers })
             setRoomState((prev) => ({ ...prev, players: allPlayers }))
             opts.onPlayersUpdate?.(allPlayers)
           }
@@ -187,58 +160,26 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           if (result) {
             const allPlayers = engine.getAllPlayers()
             
-            // Send move result
-            const moveMsg: HostToGuestMessage = {
+            broadcastToGuests({
               type: "MOVE_RESULT",
               playerId: message.playerId,
               dieRoll: result.dieRoll,
-              skippedDueToJail: result.skippedDueToJail,
               lapBonus: result.lapBonus,
               tileEvent: result.tileEvent,
               allPlayers,
-            }
-            broadcastToGuests(moveMsg)
+            })
 
-            // Send heist prompt if applicable
             if (result.heistPrompt) {
-              const heistMsg: HostToGuestMessage = {
-                type: "HEIST_PROMPT",
-                playerId: message.playerId,
-                heistData: result.heistPrompt,
-              }
-              broadcastToGuests(heistMsg)
+              broadcastToGuests({ type: "HEIST_PROMPT", playerId: message.playerId, heistData: result.heistPrompt })
             }
-
-            // Send ponzi prompt if applicable
             if (result.ponziPrompt) {
-              const ponziMsg: HostToGuestMessage = {
-                type: "PONZI_PROMPT",
-                playerId: message.playerId,
-                ponziData: result.ponziPrompt,
-              }
-              broadcastToGuests(ponziMsg)
+              broadcastToGuests({ type: "PONZI_PROMPT", playerId: message.playerId, ponziData: result.ponziPrompt })
             }
-
-            // Send marriage event if applicable
-            if (result.marriageEvent) {
-              const marriageMsg: HostToGuestMessage = {
-                type: "MARRIAGE_EVENT",
-                result: result.marriageEvent,
-                allPlayers: engine.getAllPlayers(),
-              }
-              broadcastToGuests(marriageMsg)
+            if (result.policePrompt) {
+              broadcastToGuests({ type: "POLICE_PROMPT", playerId: message.playerId, policeData: result.policePrompt })
             }
-
-            // Send jail debuff notification if applicable
-            if (result.jailApplied) {
-              const player = engine.getPlayer(message.playerId)
-              if (player) {
-                const jailMsg: HostToGuestMessage = {
-                  type: "JAIL_DEBUFF_APPLIED",
-                  playerName: player.name,
-                }
-                broadcastToGuests(jailMsg)
-              }
+            if (result.identityTheftEvent) {
+              broadcastToGuests({ type: "IDENTITY_THEFT_EVENT", result: result.identityTheftEvent, allPlayers: engine.getAllPlayers() })
             }
 
             setRoomState((prev) => ({ ...prev, players: allPlayers }))
@@ -252,45 +193,20 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           const allPlayers = engine.getAllPlayers()
           
           if (result) {
-            const heistResultMsg: HostToGuestMessage = {
-              type: "HEIST_RESULT",
-              result,
-              allPlayers,
-            }
-            broadcastToGuests(heistResultMsg)
+            broadcastToGuests({ type: "HEIST_RESULT", result, allPlayers })
 
-            // Check for marriage after heist
-            const marriageResult = engine.checkMarriageAfterInteractive(message.playerId)
-            if (marriageResult) {
-              const marriageMsg: HostToGuestMessage = {
-                type: "MARRIAGE_EVENT",
-                result: marriageResult,
-                allPlayers: engine.getAllPlayers(),
-              }
-              broadcastToGuests(marriageMsg)
-              opts.onMarriageEvent?.(marriageResult)
+            const identityTheftResult = engine.checkIdentityTheftAfterInteractive(message.playerId)
+            if (identityTheftResult) {
+              broadcastToGuests({ type: "IDENTITY_THEFT_EVENT", result: identityTheftResult, allPlayers: engine.getAllPlayers() })
+              opts.onIdentityTheftEvent?.(identityTheftResult)
             }
 
             setRoomState((prev) => ({ ...prev, players: allPlayers }))
             opts.onPlayersUpdate?.(allPlayers)
             opts.onHeistResult?.(result)
           } else {
-            // Heist failed - send a "failed" result so the modal closes
-            console.warn("Heist failed for player:", message.playerId)
             const player = engine.getPlayer(message.playerId)
-            const failedResult: HeistResultData = {
-              thiefName: player?.name || "Unknown",
-              victimName: "Nobody",
-              amountStolen: 0,
-            }
-            const heistResultMsg: HostToGuestMessage = {
-              type: "HEIST_RESULT",
-              result: failedResult,
-              allPlayers,
-            }
-            // Send directly to the connection that sent this message
-            conn.send(heistResultMsg)
-            opts.onHeistResult?.(failedResult)
+            conn.send({ type: "HEIST_RESULT", result: { thiefName: player?.name || "Unknown", victimName: "Nobody", amountStolen: 0 }, allPlayers })
           }
           break
         }
@@ -300,43 +216,43 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           const allPlayers = engine.getAllPlayers()
           
           if (result) {
-            const ponziResultMsg: HostToGuestMessage = {
-              type: "PONZI_RESULT",
-              result,
-              allPlayers,
-            }
-            broadcastToGuests(ponziResultMsg)
+            broadcastToGuests({ type: "PONZI_RESULT", result, allPlayers })
 
-            // Check for marriage after ponzi
-            const marriageResult = engine.checkMarriageAfterInteractive(message.playerId)
-            if (marriageResult) {
-              const marriageMsg: HostToGuestMessage = {
-                type: "MARRIAGE_EVENT",
-                result: marriageResult,
-                allPlayers: engine.getAllPlayers(),
-              }
-              broadcastToGuests(marriageMsg)
-              opts.onMarriageEvent?.(marriageResult)
+            const identityTheftResult = engine.checkIdentityTheftAfterInteractive(message.playerId)
+            if (identityTheftResult) {
+              broadcastToGuests({ type: "IDENTITY_THEFT_EVENT", result: identityTheftResult, allPlayers: engine.getAllPlayers() })
+              opts.onIdentityTheftEvent?.(identityTheftResult)
             }
 
             setRoomState((prev) => ({ ...prev, players: allPlayers }))
             opts.onPlayersUpdate?.(allPlayers)
             opts.onPonziResult?.(result)
           } else {
-            // Ponzi failed - send a "skipped" result so the modal closes
-            console.warn("Ponzi failed for player:", message.playerId)
             const player = engine.getPlayer(message.playerId)
-            const failedResult: PonziResultData = {
-              playerName: player?.name || "Unknown",
-              invested: false,
+            conn.send({ type: "PONZI_RESULT", result: { playerName: player?.name || "Unknown", invested: false }, allPlayers })
+          }
+          break
+        }
+
+        case "POLICE_TARGET_SELECTED": {
+          const result = engine.processPoliceTarget(message.playerId, message.targetPlayerId)
+          const allPlayers = engine.getAllPlayers()
+          
+          if (result) {
+            broadcastToGuests({ type: "POLICE_RESULT", result, allPlayers })
+
+            const identityTheftResult = engine.checkIdentityTheftAfterInteractive(message.playerId)
+            if (identityTheftResult) {
+              broadcastToGuests({ type: "IDENTITY_THEFT_EVENT", result: identityTheftResult, allPlayers: engine.getAllPlayers() })
+              opts.onIdentityTheftEvent?.(identityTheftResult)
             }
-            const ponziResultMsg: HostToGuestMessage = {
-              type: "PONZI_RESULT",
-              result: failedResult,
-              allPlayers,
-            }
-            conn.send(ponziResultMsg)
-            opts.onPonziResult?.(failedResult)
+
+            setRoomState((prev) => ({ ...prev, players: allPlayers }))
+            opts.onPlayersUpdate?.(allPlayers)
+            opts.onPoliceResult?.(result)
+          } else {
+            const player = engine.getPlayer(message.playerId)
+            conn.send({ type: "POLICE_RESULT", result: { snitchName: player?.name || "Unknown", victimName: "Nobody", coinsLost: 0 }, allPlayers })
           }
           break
         }
@@ -345,38 +261,27 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           engine.removePlayer(message.playerId)
           connectionsRef.current.delete(message.playerId)
           const allPlayers = engine.getAllPlayers()
-
-          const leaveMsg: HostToGuestMessage = {
-            type: "PLAYER_LEFT",
-            playerId: message.playerId,
-            allPlayers,
-          }
-          broadcastToGuests(leaveMsg)
+          broadcastToGuests({ type: "PLAYER_LEFT", playerId: message.playerId, allPlayers })
           setRoomState((prev) => ({ ...prev, players: allPlayers }))
           opts.onPlayersUpdate?.(allPlayers)
           break
         }
       }
     },
-    [broadcastToGuests] // Uses refs for options
+    [broadcastToGuests]
   )
 
-  // Handle message from host (guest only) - uses refs to avoid stale closures
+  // Handle message from host (guest only)
   const handleHostMessage = useCallback(
     (message: HostToGuestMessage) => {
-      const currentPlayerId = myPlayerIdRef.current
       const opts = optionsRef.current
       
       switch (message.type) {
         case "JOIN_ACCEPTED":
           setMyPlayerId(message.playerId)
-          myPlayerIdRef.current = message.playerId // Update ref immediately
+          myPlayerIdRef.current = message.playerId
           setMyPlayer(message.player)
-          setRoomState((prev) => ({
-            ...prev,
-            connectionState: "connected",
-            players: message.allPlayers,
-          }))
+          setRoomState((prev) => ({ ...prev, connectionState: "connected", players: message.allPlayers }))
           opts.onPlayersUpdate?.(message.allPlayers)
           break
 
@@ -406,11 +311,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           setRoomState((prev) => ({ ...prev, players: message.allPlayers }))
           opts.onPlayersUpdate?.(message.allPlayers)
           if (message.playerId === myPlayerIdRef.current) {
-            opts.onAnswerResult?.({
-              playerId: message.playerId,
-              correct: message.correct,
-              newCoins: message.newCoins,
-            })
+            opts.onAnswerResult?.({ playerId: message.playerId, correct: message.correct, newCoins: message.newCoins })
           }
           updateMyPlayer(message.allPlayers)
           break
@@ -421,13 +322,10 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           if (message.playerId === myPlayerIdRef.current) {
             const moveResult: MoveResultForUI = {
               dieRoll: message.dieRoll,
-              skippedDueToJail: message.skippedDueToJail,
               lapBonus: message.lapBonus,
               tileEvent: message.tileEvent,
             }
             opts.onMoveResult?.({ playerId: message.playerId, ...moveResult })
-            
-            // Resolve pending move promise
             if (pendingMoveResolverRef.current) {
               pendingMoveResolverRef.current(moveResult)
               pendingMoveResolverRef.current = null
@@ -462,15 +360,24 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           updateMyPlayer(message.allPlayers)
           break
 
-        case "MARRIAGE_EVENT":
+        case "POLICE_PROMPT":
+          if (message.playerId === myPlayerIdRef.current) {
+            opts.onPolicePrompt?.(message.policeData)
+          }
+          break
+
+        case "POLICE_RESULT":
           setRoomState((prev) => ({ ...prev, players: message.allPlayers }))
           opts.onPlayersUpdate?.(message.allPlayers)
-          opts.onMarriageEvent?.(message.result)
+          opts.onPoliceResult?.(message.result)
           updateMyPlayer(message.allPlayers)
           break
 
-        case "JAIL_DEBUFF_APPLIED":
-          opts.onJailApplied?.(message.playerName)
+        case "IDENTITY_THEFT_EVENT":
+          setRoomState((prev) => ({ ...prev, players: message.allPlayers }))
+          opts.onPlayersUpdate?.(message.allPlayers)
+          opts.onIdentityTheftEvent?.(message.result)
+          updateMyPlayer(message.allPlayers)
           break
 
         case "GAME_RESET":
@@ -483,70 +390,42 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           break
       }
     },
-    [updateMyPlayer] // Only depends on updateMyPlayer, uses refs for the rest
+    [updateMyPlayer]
   )
 
-  // Create a new room (become host)
   const createRoom = useCallback(
     (hostName: string) => {
       const roomCode = generateRoomCode()
       const peerId = roomCodeToPeerId(roomCode)
 
-      setRoomState((prev) => ({
-        ...prev,
-        roomCode,
-        role: "host",
-        connectionState: "connecting",
-        hostName,
-      }))
+      setRoomState((prev) => ({ ...prev, roomCode, role: "host", connectionState: "connecting", hostName }))
 
       gameEngineRef.current = new P2PGameEngine()
 
       const peer = new Peer(peerId)
       peerRef.current = peer
 
-      peer.on("open", (id) => {
-        console.log("Host peer opened with ID:", id)
-
+      peer.on("open", () => {
         const hostPlayerId = `host-${Date.now()}`
         const hostPlayer = gameEngineRef.current!.addPlayer(hostPlayerId, hostName)
         setMyPlayerId(hostPlayerId)
-        myPlayerIdRef.current = hostPlayerId // Update ref immediately
+        myPlayerIdRef.current = hostPlayerId
         setMyPlayer(hostPlayer)
 
         const allPlayers = gameEngineRef.current!.getAllPlayers()
-        setRoomState((prev) => ({
-          ...prev,
-          connectionState: "connected",
-          players: allPlayers,
-        }))
+        setRoomState((prev) => ({ ...prev, connectionState: "connected", players: allPlayers }))
         optionsRef.current.onPlayersUpdate?.(allPlayers)
       })
 
       peer.on("connection", (conn) => {
-        console.log("Guest connected:", conn.peer)
-
-        conn.on("open", () => {
-          console.log("Connection opened with guest")
-        })
-
-        conn.on("data", (data) => {
-          handleGuestMessage(data as GuestToHostMessage, conn)
-        })
-
+        conn.on("data", (data) => handleGuestMessage(data as GuestToHostMessage, conn))
         conn.on("close", () => {
           const playerId = conn.metadata?.playerId
           if (playerId && gameEngineRef.current) {
             gameEngineRef.current.removePlayer(playerId)
             connectionsRef.current.delete(playerId)
             const allPlayers = gameEngineRef.current.getAllPlayers()
-
-            const leaveMsg: HostToGuestMessage = {
-              type: "PLAYER_LEFT",
-              playerId,
-              allPlayers,
-            }
-            broadcastToGuests(leaveMsg)
+            broadcastToGuests({ type: "PLAYER_LEFT", playerId, allPlayers })
             setRoomState((prev) => ({ ...prev, players: allPlayers }))
             optionsRef.current.onPlayersUpdate?.(allPlayers)
           }
@@ -554,7 +433,6 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
       })
 
       peer.on("error", (err) => {
-        console.error("Peer error:", err)
         optionsRef.current.onError?.(err.message)
         setRoomState((prev) => ({ ...prev, connectionState: "error" }))
       })
@@ -562,55 +440,31 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
     [broadcastToGuests, handleGuestMessage]
   )
 
-  // Join an existing room
   const joinRoom = useCallback(
     (roomCode: string, playerName: string) => {
       const peerId = roomCodeToPeerId(roomCode)
-
-      setRoomState((prev) => ({
-        ...prev,
-        roomCode: roomCode.toUpperCase(),
-        role: "guest",
-        connectionState: "connecting",
-      }))
+      setRoomState((prev) => ({ ...prev, roomCode: roomCode.toUpperCase(), role: "guest", connectionState: "connecting" }))
 
       const peer = new Peer()
       peerRef.current = peer
 
       peer.on("open", () => {
-        console.log("Guest peer opened, connecting to host:", peerId)
-
         const conn = peer.connect(peerId, { reliable: true })
         hostConnectionRef.current = conn
 
-        conn.on("open", () => {
-          console.log("Connected to host")
-          const joinMsg: GuestToHostMessage = {
-            type: "JOIN_REQUEST",
-            playerName,
-          }
-          conn.send(joinMsg)
-        })
-
-        conn.on("data", (data) => {
-          handleHostMessage(data as HostToGuestMessage)
-        })
-
+        conn.on("open", () => conn.send({ type: "JOIN_REQUEST", playerName }))
+        conn.on("data", (data) => handleHostMessage(data as HostToGuestMessage))
         conn.on("close", () => {
-          console.log("Connection to host closed")
           optionsRef.current.onHostDisconnected?.()
           setRoomState((prev) => ({ ...prev, connectionState: "disconnected" }))
         })
-
-        conn.on("error", (err) => {
-          console.error("Connection error:", err)
+        conn.on("error", () => {
           optionsRef.current.onError?.("Failed to connect to room")
           setRoomState((prev) => ({ ...prev, connectionState: "error" }))
         })
       })
 
       peer.on("error", (err) => {
-        console.error("Peer error:", err)
         if (err.type === "peer-unavailable") {
           optionsRef.current.onError?.("Room not found. Check the code and try again.")
         } else {
@@ -622,24 +476,15 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
     [handleHostMessage]
   )
 
-  // Start the game (host only)
   const startGame = useCallback(() => {
     if (roomState.role !== "host" || !gameEngineRef.current) return
-
     const allPlayers = gameEngineRef.current.startGame()
-
-    const startMsg: HostToGuestMessage = {
-      type: "GAME_STARTED",
-      allPlayers,
-    }
-    broadcastToGuests(startMsg)
-
+    broadcastToGuests({ type: "GAME_STARTED", allPlayers })
     setRoomState((prev) => ({ ...prev, gameStarted: true, players: allPlayers }))
     options.onPlayersUpdate?.(allPlayers)
     options.onGameStarted?.()
   }, [broadcastToGuests, options, roomState.role])
 
-  // Submit an answer
   const submitAnswer = useCallback(
     (questionIndex: number, answerIndex: number) => {
       if (!myPlayerId) return
@@ -648,48 +493,24 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
         const result = gameEngineRef.current.submitAnswer(myPlayerId, questionIndex, answerIndex)
         if (result) {
           const allPlayers = gameEngineRef.current.getAllPlayers()
-
-          const resultMsg: HostToGuestMessage = {
-            type: "ANSWER_RESULT",
-            playerId: myPlayerId,
-            correct: result.correct,
-            newCoins: result.newCoins,
-            allPlayers,
-          }
-          broadcastToGuests(resultMsg)
-
+          broadcastToGuests({ type: "ANSWER_RESULT", playerId: myPlayerId, correct: result.correct, newCoins: result.newCoins, allPlayers })
           setRoomState((prev) => ({ ...prev, players: allPlayers }))
           options.onPlayersUpdate?.(allPlayers)
-          options.onAnswerResult?.({
-            playerId: myPlayerId,
-            correct: result.correct,
-            newCoins: result.newCoins,
-          })
-
-          const updatedPlayer = allPlayers.find((p) => p.id === myPlayerId)
-          if (updatedPlayer) {
-            setMyPlayer(updatedPlayer)
-          }
+          options.onAnswerResult?.({ playerId: myPlayerId, correct: result.correct, newCoins: result.newCoins })
+          updateMyPlayer(allPlayers)
         }
       } else {
-        const msg: GuestToHostMessage = {
-          type: "SUBMIT_ANSWER",
-          playerId: myPlayerId,
-          questionIndex,
-          answerIndex,
-        }
-        sendToHost(msg)
+        sendToHost({ type: "SUBMIT_ANSWER", playerId: myPlayerId, questionIndex, answerIndex })
       }
     },
-    [broadcastToGuests, myPlayerId, options, roomState.role, sendToHost]
+    [broadcastToGuests, myPlayerId, options, roomState.role, sendToHost, updateMyPlayer]
   )
 
-  // Advance to next question - returns a Promise with the result
   const advanceQuestion = useCallback(
     (wasCorrect: boolean): Promise<MoveResultForUI> => {
       return new Promise((resolve) => {
         if (!myPlayerId) {
-          resolve({ dieRoll: null, skippedDueToJail: false, lapBonus: null, tileEvent: null })
+          resolve({ dieRoll: null, lapBonus: null, tileEvent: null })
           return
         }
 
@@ -697,83 +518,39 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           const result = gameEngineRef.current.advanceQuestion(myPlayerId, wasCorrect)
           if (result) {
             const allPlayers = gameEngineRef.current.getAllPlayers()
+            broadcastToGuests({ type: "MOVE_RESULT", playerId: myPlayerId, dieRoll: result.dieRoll, lapBonus: result.lapBonus, tileEvent: result.tileEvent, allPlayers })
 
-            // Broadcast move result
-            const moveMsg: HostToGuestMessage = {
-              type: "MOVE_RESULT",
-              playerId: myPlayerId,
-              dieRoll: result.dieRoll,
-              skippedDueToJail: result.skippedDueToJail,
-              lapBonus: result.lapBonus,
-              tileEvent: result.tileEvent,
-              allPlayers,
-            }
-            broadcastToGuests(moveMsg)
-
-            // Handle interactive prompts for host
-            if (result.heistPrompt) {
-              options.onHeistPrompt?.(result.heistPrompt)
-            }
-            if (result.ponziPrompt) {
-              options.onPonziPrompt?.(result.ponziPrompt)
-            }
-            if (result.marriageEvent) {
-              const marriageMsg: HostToGuestMessage = {
-                type: "MARRIAGE_EVENT",
-                result: result.marriageEvent,
-                allPlayers: gameEngineRef.current.getAllPlayers(),
-              }
-              broadcastToGuests(marriageMsg)
-              options.onMarriageEvent?.(result.marriageEvent)
-            }
-            if (result.jailApplied) {
-              const player = gameEngineRef.current.getPlayer(myPlayerId)
-              if (player) {
-                const jailMsg: HostToGuestMessage = {
-                  type: "JAIL_DEBUFF_APPLIED",
-                  playerName: player.name,
-                }
-                broadcastToGuests(jailMsg)
-                options.onJailApplied?.(player.name)
-              }
+            if (result.heistPrompt) options.onHeistPrompt?.(result.heistPrompt)
+            if (result.ponziPrompt) options.onPonziPrompt?.(result.ponziPrompt)
+            if (result.policePrompt) options.onPolicePrompt?.(result.policePrompt)
+            if (result.identityTheftEvent) {
+              broadcastToGuests({ type: "IDENTITY_THEFT_EVENT", result: result.identityTheftEvent, allPlayers: gameEngineRef.current.getAllPlayers() })
+              options.onIdentityTheftEvent?.(result.identityTheftEvent)
             }
 
             setRoomState((prev) => ({ ...prev, players: allPlayers }))
             options.onPlayersUpdate?.(allPlayers)
             options.onMoveResult?.({ playerId: myPlayerId, ...result })
-
-            const updatedPlayer = allPlayers.find((p) => p.id === myPlayerId)
-            if (updatedPlayer) {
-              setMyPlayer(updatedPlayer)
-            }
-
+            updateMyPlayer(allPlayers)
             resolve(result)
           } else {
-            resolve({ dieRoll: null, skippedDueToJail: false, lapBonus: null, tileEvent: null })
+            resolve({ dieRoll: null, lapBonus: null, tileEvent: null })
           }
         } else {
           pendingMoveResolverRef.current = resolve
-
-          const msg: GuestToHostMessage = {
-            type: "NEXT_QUESTION",
-            playerId: myPlayerId,
-            wasCorrect,
-          }
-          sendToHost(msg)
-
+          sendToHost({ type: "NEXT_QUESTION", playerId: myPlayerId, wasCorrect })
           setTimeout(() => {
             if (pendingMoveResolverRef.current === resolve) {
               pendingMoveResolverRef.current = null
-              resolve({ dieRoll: null, skippedDueToJail: false, lapBonus: null, tileEvent: null })
+              resolve({ dieRoll: null, lapBonus: null, tileEvent: null })
             }
           }, 10000)
         }
       })
     },
-    [broadcastToGuests, myPlayerId, options, roomState.role, sendToHost]
+    [broadcastToGuests, myPlayerId, options, roomState.role, sendToHost, updateMyPlayer]
   )
 
-  // Select heist target
   const selectHeistTarget = useCallback(
     (targetPlayerId: string) => {
       if (!myPlayerId) return
@@ -782,47 +559,26 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
         const result = gameEngineRef.current.processHeistTarget(myPlayerId, targetPlayerId)
         if (result) {
           const allPlayers = gameEngineRef.current.getAllPlayers()
-          const heistResultMsg: HostToGuestMessage = {
-            type: "HEIST_RESULT",
-            result,
-            allPlayers,
-          }
-          broadcastToGuests(heistResultMsg)
+          broadcastToGuests({ type: "HEIST_RESULT", result, allPlayers })
 
-          // Check for marriage after heist
-          const marriageResult = gameEngineRef.current.checkMarriageAfterInteractive(myPlayerId)
-          if (marriageResult) {
-            const marriageMsg: HostToGuestMessage = {
-              type: "MARRIAGE_EVENT",
-              result: marriageResult,
-              allPlayers: gameEngineRef.current.getAllPlayers(),
-            }
-            broadcastToGuests(marriageMsg)
-            options.onMarriageEvent?.(marriageResult)
+          const identityTheftResult = gameEngineRef.current.checkIdentityTheftAfterInteractive(myPlayerId)
+          if (identityTheftResult) {
+            broadcastToGuests({ type: "IDENTITY_THEFT_EVENT", result: identityTheftResult, allPlayers: gameEngineRef.current.getAllPlayers() })
+            options.onIdentityTheftEvent?.(identityTheftResult)
           }
 
           setRoomState((prev) => ({ ...prev, players: allPlayers }))
           options.onPlayersUpdate?.(allPlayers)
           options.onHeistResult?.(result)
-
-          const updatedPlayer = allPlayers.find((p) => p.id === myPlayerId)
-          if (updatedPlayer) {
-            setMyPlayer(updatedPlayer)
-          }
+          updateMyPlayer(allPlayers)
         }
       } else {
-        const msg: GuestToHostMessage = {
-          type: "HEIST_TARGET_SELECTED",
-          playerId: myPlayerId,
-          targetPlayerId,
-        }
-        sendToHost(msg)
+        sendToHost({ type: "HEIST_TARGET_SELECTED", playerId: myPlayerId, targetPlayerId })
       }
     },
-    [broadcastToGuests, myPlayerId, options, roomState.role, sendToHost]
+    [broadcastToGuests, myPlayerId, options, roomState.role, sendToHost, updateMyPlayer]
   )
 
-  // Make ponzi choice
   const makePonziChoice = useCallback(
     (invest: boolean) => {
       if (!myPlayerId) return
@@ -831,97 +587,89 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
         const result = gameEngineRef.current.processPonziChoice(myPlayerId, invest)
         if (result) {
           const allPlayers = gameEngineRef.current.getAllPlayers()
-          const ponziResultMsg: HostToGuestMessage = {
-            type: "PONZI_RESULT",
-            result,
-            allPlayers,
-          }
-          broadcastToGuests(ponziResultMsg)
+          broadcastToGuests({ type: "PONZI_RESULT", result, allPlayers })
 
-          // Check for marriage after ponzi
-          const marriageResult = gameEngineRef.current.checkMarriageAfterInteractive(myPlayerId)
-          if (marriageResult) {
-            const marriageMsg: HostToGuestMessage = {
-              type: "MARRIAGE_EVENT",
-              result: marriageResult,
-              allPlayers: gameEngineRef.current.getAllPlayers(),
-            }
-            broadcastToGuests(marriageMsg)
-            options.onMarriageEvent?.(marriageResult)
+          const identityTheftResult = gameEngineRef.current.checkIdentityTheftAfterInteractive(myPlayerId)
+          if (identityTheftResult) {
+            broadcastToGuests({ type: "IDENTITY_THEFT_EVENT", result: identityTheftResult, allPlayers: gameEngineRef.current.getAllPlayers() })
+            options.onIdentityTheftEvent?.(identityTheftResult)
           }
 
           setRoomState((prev) => ({ ...prev, players: allPlayers }))
           options.onPlayersUpdate?.(allPlayers)
           options.onPonziResult?.(result)
-
-          const updatedPlayer = allPlayers.find((p) => p.id === myPlayerId)
-          if (updatedPlayer) {
-            setMyPlayer(updatedPlayer)
-          }
+          updateMyPlayer(allPlayers)
         }
       } else {
-        const msg: GuestToHostMessage = {
-          type: "PONZI_CHOICE",
-          playerId: myPlayerId,
-          invest,
-        }
-        sendToHost(msg)
+        sendToHost({ type: "PONZI_CHOICE", playerId: myPlayerId, invest })
       }
     },
-    [broadcastToGuests, myPlayerId, options, roomState.role, sendToHost]
+    [broadcastToGuests, myPlayerId, options, roomState.role, sendToHost, updateMyPlayer]
   )
 
-  // Reset game (host only)
+  const selectPoliceTarget = useCallback(
+    (targetPlayerId: string) => {
+      if (!myPlayerId) return
+
+      if (roomState.role === "host" && gameEngineRef.current) {
+        const result = gameEngineRef.current.processPoliceTarget(myPlayerId, targetPlayerId)
+        if (result) {
+          const allPlayers = gameEngineRef.current.getAllPlayers()
+          broadcastToGuests({ type: "POLICE_RESULT", result, allPlayers })
+
+          const identityTheftResult = gameEngineRef.current.checkIdentityTheftAfterInteractive(myPlayerId)
+          if (identityTheftResult) {
+            broadcastToGuests({ type: "IDENTITY_THEFT_EVENT", result: identityTheftResult, allPlayers: gameEngineRef.current.getAllPlayers() })
+            options.onIdentityTheftEvent?.(identityTheftResult)
+          }
+
+          setRoomState((prev) => ({ ...prev, players: allPlayers }))
+          options.onPlayersUpdate?.(allPlayers)
+          options.onPoliceResult?.(result)
+          updateMyPlayer(allPlayers)
+        }
+      } else {
+        sendToHost({ type: "POLICE_TARGET_SELECTED", playerId: myPlayerId, targetPlayerId })
+      }
+    },
+    [broadcastToGuests, myPlayerId, options, roomState.role, sendToHost, updateMyPlayer]
+  )
+
   const resetGame = useCallback(() => {
     if (roomState.role !== "host" || !gameEngineRef.current) return
-
     gameEngineRef.current.reset()
-
-    const resetMsg: HostToGuestMessage = {
-      type: "GAME_RESET",
+    // Cancel any pending move resolver
+    if (pendingMoveResolverRef.current) {
+      pendingMoveResolverRef.current({ dieRoll: null, lapBonus: null, tileEvent: null })
+      pendingMoveResolverRef.current = null
     }
-    broadcastToGuests(resetMsg)
-
-    setRoomState((prev) => ({
-      ...prev,
-      players: [],
-      gameStarted: false,
-    }))
+    broadcastToGuests({ type: "GAME_RESET" })
+    setRoomState((prev) => ({ ...prev, players: [], gameStarted: false }))
     options.onGameReset?.()
   }, [broadcastToGuests, options, roomState.role])
 
-  // Leave the game
   const leaveGame = useCallback(() => {
     if (roomState.role === "guest" && myPlayerId) {
-      const msg: GuestToHostMessage = {
-        type: "LEAVE_GAME",
-        playerId: myPlayerId,
-      }
-      sendToHost(msg)
+      sendToHost({ type: "LEAVE_GAME", playerId: myPlayerId })
     }
-
+    // Cancel any pending move resolver
+    if (pendingMoveResolverRef.current) {
+      pendingMoveResolverRef.current({ dieRoll: null, lapBonus: null, tileEvent: null })
+      pendingMoveResolverRef.current = null
+    }
     peerRef.current?.destroy()
     peerRef.current = null
     hostConnectionRef.current = null
     connectionsRef.current.clear()
     gameEngineRef.current = null
-
-    setRoomState({
-      roomCode: "",
-      role: "guest",
-      connectionState: "disconnected",
-      players: [],
-      gameStarted: false,
-    })
+    setRoomState({ roomCode: "", role: "guest", connectionState: "disconnected", players: [], gameStarted: false })
     setMyPlayerId(null)
+    myPlayerIdRef.current = null
     setMyPlayer(null)
   }, [myPlayerId, roomState.role, sendToHost])
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      peerRef.current?.destroy()
-    }
+    return () => { peerRef.current?.destroy() }
   }, [])
 
   return {
@@ -935,6 +683,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
     advanceQuestion,
     selectHeistTarget,
     makePonziChoice,
+    selectPoliceTarget,
     resetGame,
     leaveGame,
   }

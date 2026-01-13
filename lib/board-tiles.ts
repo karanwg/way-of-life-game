@@ -1,10 +1,11 @@
 export type TileEffect =
   | "none"
   | "coins"
-  | "heist_light"
-  | "heist_heavy"
+  | "heist_10"
+  | "heist_100"
+  | "heist_50"
   | "ponzi"
-  | "jail"
+  | "police_station"
 
 export interface Tile {
   id: number
@@ -17,10 +18,10 @@ export interface Tile {
 export const TILES: Tile[] = [
   {
     id: 0,
-    name: "Spawn",
-    effect: "none",
-    coins: 0,
-    text: "The beginning. Nothing special here.",
+    name: "Home",
+    effect: "coins",
+    coins: 100,
+    text: "Home sweet home! Collect your bonus.",
   },
   {
     id: 1,
@@ -31,17 +32,17 @@ export const TILES: Tile[] = [
   },
   {
     id: 2,
-    name: "Won a Random Giveaway",
-    effect: "coins",
-    coins: 100,
-    text: "You replied 'done' to a giveaway and somehow won!",
+    name: "Pickpocket",
+    effect: "heist_10",
+    coins: 0,
+    text: "Sneak up and skim 10% off someone's wallet.",
   },
   {
     id: 3,
-    name: "Heist (Light)",
-    effect: "heist_light",
+    name: "Quick Heist",
+    effect: "heist_100",
     coins: 0,
-    text: "Pick a target. Steal 100 coins from them.",
+    text: "A clean grab. Take 100 coins from someone.",
   },
   {
     id: 4,
@@ -52,52 +53,52 @@ export const TILES: Tile[] = [
   },
   {
     id: 5,
-    name: "Side Hustle You Saw on YouTube",
+    name: "Side Hustle",
     effect: "coins",
     coins: -50,
-    text: "This 17-year-old said it made him rich. It did not.",
+    text: "That YouTube guru lied. You're down 50.",
   },
   {
     id: 6,
     name: "Ponzi Scheme",
     effect: "ponzi",
     coins: 0,
-    text: "Invest or skip? 50/50 chance to gain or lose 50% of your coins.",
+    text: "75% chance to double your coins. 25% chance to lose half.",
   },
   {
     id: 7,
-    name: "Meditation Break",
-    effect: "none",
-    coins: 0,
-    text: "You take a breath. The chaos continues around you.",
-  },
-  {
-    id: 8,
-    name: "Heist (Heavy)",
-    effect: "heist_heavy",
-    coins: 0,
-    text: "Pick a target. Steal 50% of their coins. Leave them with at least 50.",
-  },
-  {
-    id: 9,
     name: "Nothing Happens",
     effect: "none",
     coins: 0,
-    text: "Sit with the emptiness.",
+    text: "The universe ignores you today.",
   },
   {
-    id: 10,
+    id: 8,
+    name: "Grand Heist",
+    effect: "heist_50",
+    coins: 0,
+    text: "Go big. Steal 50% of someone's entire fortune.",
+  },
+  {
+    id: 9,
     name: "Also Nothing",
     effect: "none",
     coins: 0,
     text: "Still nothing. Life is like that sometimes.",
   },
   {
-    id: 11,
-    name: "Jail",
-    effect: "jail",
+    id: 10,
+    name: "Crypto Casino",
+    effect: "ponzi",
     coins: 0,
-    text: "You're locked up! Next correct answer skips movement.",
+    text: "75% chance to double your coins. 25% chance to lose half.",
+  },
+  {
+    id: 11,
+    name: "Police Station",
+    effect: "police_station",
+    coins: 0,
+    text: "Snitch on someone. They lose 300 coins.",
   },
 ]
 

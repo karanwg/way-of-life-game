@@ -21,15 +21,20 @@ export interface TileEventData {
   coinsDelta: number
 }
 
-// Heist prompt data
+// Heist prompt data - now includes heist type
 export interface HeistPromptData {
-  type: "light" | "heavy"
+  type: "10" | "100" | "50" // percentage or fixed amount
   availableTargets: { id: string; name: string; coins: number }[]
 }
 
 // Ponzi prompt data
 export interface PonziPromptData {
   currentCoins: number
+}
+
+// Police station prompt data (snitch)
+export interface PolicePromptData {
+  availableTargets: { id: string; name: string; coins: number }[]
 }
 
 // Heist result data
@@ -47,18 +52,21 @@ export interface PonziResultData {
   coinsChange?: number
 }
 
-// Marriage result data
-export interface MarriageResultData {
-  player1Name: string
-  player2Name: string
-  pooledCoins: number
-  eachReceived: number
+// Police/Snitch result data
+export interface PoliceResultData {
+  snitchName: string
+  victimName: string
+  coinsLost: number
 }
 
-// Jail debuff notification
-export interface JailDebuffData {
-  playerName: string
-  skippedMovement: boolean
+// Identity theft result data (replaces marriage)
+export interface IdentityTheftResultData {
+  player1Name: string
+  player2Name: string
+  player1OldCoins: number
+  player2OldCoins: number
+  player1NewCoins: number
+  player2NewCoins: number
 }
 
 // Messages sent from guest to host
@@ -68,6 +76,7 @@ export type GuestToHostMessage =
   | { type: "NEXT_QUESTION"; playerId: string; wasCorrect: boolean }
   | { type: "HEIST_TARGET_SELECTED"; playerId: string; targetPlayerId: string }
   | { type: "PONZI_CHOICE"; playerId: string; invest: boolean }
+  | { type: "POLICE_TARGET_SELECTED"; playerId: string; targetPlayerId: string }
   | { type: "LEAVE_GAME"; playerId: string }
 
 // Messages sent from host to guests
@@ -89,7 +98,6 @@ export type HostToGuestMessage =
       type: "MOVE_RESULT"
       playerId: string
       dieRoll: number | null
-      skippedDueToJail: boolean
       lapBonus: { lapsCompleted: number; coinsAwarded: number } | null
       tileEvent: TileEventData | null
       allPlayers: Player[]
@@ -115,13 +123,19 @@ export type HostToGuestMessage =
       allPlayers: Player[]
     }
   | {
-      type: "MARRIAGE_EVENT"
-      result: MarriageResultData
+      type: "POLICE_PROMPT"
+      playerId: string
+      policeData: PolicePromptData
+    }
+  | {
+      type: "POLICE_RESULT"
+      result: PoliceResultData
       allPlayers: Player[]
     }
   | {
-      type: "JAIL_DEBUFF_APPLIED"
-      playerName: string
+      type: "IDENTITY_THEFT_EVENT"
+      result: IdentityTheftResultData
+      allPlayers: Player[]
     }
   | { type: "GAME_RESET" }
   | { type: "HOST_DISCONNECTED" }
@@ -135,9 +149,12 @@ export interface GameEngineState {
   // Pending interactive effects
   pendingHeist?: {
     playerId: string
-    type: "light" | "heavy"
+    type: "10" | "100" | "50"
   }
   pendingPonzi?: {
+    playerId: string
+  }
+  pendingPolice?: {
     playerId: string
   }
 }

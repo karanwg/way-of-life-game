@@ -18,14 +18,16 @@ function getTileColors(effect: string, coins?: number) {
       return coins && coins > 0
         ? { bg: "from-yellow-400/80 to-amber-500/80", border: "border-yellow-300/50", icon: "💰" }
         : { bg: "from-red-500/80 to-rose-600/80", border: "border-red-400/50", icon: "💸" }
-    case "heist_light":
+    case "heist_10":
+      return { bg: "from-orange-400/80 to-amber-500/80", border: "border-orange-300/50", icon: "🤏" }
+    case "heist_100":
       return { bg: "from-orange-500/80 to-red-600/80", border: "border-orange-400/50", icon: "🎭" }
-    case "heist_heavy":
+    case "heist_50":
       return { bg: "from-red-600/80 to-rose-700/80", border: "border-red-500/50", icon: "🔫" }
     case "ponzi":
       return { bg: "from-purple-500/80 to-pink-600/80", border: "border-purple-400/50", icon: "🎰" }
-    case "jail":
-      return { bg: "from-gray-600/80 to-slate-700/80", border: "border-gray-500/50", icon: "⛓️" }
+    case "police_station":
+      return { bg: "from-blue-500/80 to-cyan-600/80", border: "border-blue-400/50", icon: "🚔" }
     default:
       return { bg: "from-slate-500/80 to-slate-600/80", border: "border-slate-400/50", icon: "❓" }
   }
@@ -173,6 +175,7 @@ export function Board({ players, currentPlayerId }: BoardProps) {
           player={player}
           playerIndex={getPlayerIndex(player.id)}
           isCurrentPlayer={player.id === currentPlayerId}
+          allPlayers={players}
         />
       ))}
     </div>

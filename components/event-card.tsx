@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { X, Coins, Zap, MapPin, Shuffle, Heart, Lock, Briefcase } from "lucide-react"
+import { X, Coins, Zap, Shuffle, Briefcase } from "lucide-react"
 
 export interface EventCardData {
   tileName: string
@@ -19,18 +19,21 @@ interface EventCardProps {
 // Get icon and colors based on event type
 function getEventStyle(coinsDelta: number, tileName: string) {
   // Heist tiles
-  if (tileName.includes("Heist")) {
+  if (tileName.includes("Heist") || tileName.includes("Pickpocket")) {
+    let emoji = "🎭"
+    if (tileName.includes("Grand")) emoji = "🔫"
+    if (tileName.includes("Pickpocket")) emoji = "🤏"
     return {
       icon: Zap,
       bg: "from-red-600 to-orange-700",
       border: "border-red-400",
       iconBg: "bg-red-500",
-      emoji: tileName.includes("Heavy") ? "🔫" : "🎭",
+      emoji,
     }
   }
   
-  // Ponzi scheme
-  if (tileName.includes("Ponzi")) {
+  // Ponzi scheme / Crypto Casino
+  if (tileName.includes("Ponzi") || tileName.includes("Crypto")) {
     return {
       icon: Shuffle,
       bg: "from-purple-600 to-pink-700",
@@ -40,30 +43,19 @@ function getEventStyle(coinsDelta: number, tileName: string) {
     }
   }
   
-  // Jail
-  if (tileName.includes("Jail")) {
+  // Police Station
+  if (tileName.includes("Police")) {
     return {
-      icon: Lock,
-      bg: "from-gray-700 to-slate-800",
-      border: "border-gray-500",
-      iconBg: "bg-gray-600",
-      emoji: "⛓️",
+      icon: Briefcase,
+      bg: "from-blue-600 to-cyan-700",
+      border: "border-blue-400",
+      iconBg: "bg-blue-500",
+      emoji: "🚔",
     }
   }
   
-  // Giveaway / positive coins
-  if (tileName.includes("Giveaway")) {
-    return {
-      icon: Shuffle,
-      bg: "from-yellow-500 to-amber-600",
-      border: "border-yellow-400",
-      iconBg: "bg-yellow-500",
-      emoji: "🎁",
-    }
-  }
-  
-  // YouTube side hustle
-  if (tileName.includes("YouTube") || tileName.includes("Side Hustle")) {
+  // Side hustle
+  if (tileName.includes("Side Hustle")) {
     return {
       icon: Zap,
       bg: "from-red-600 to-rose-700",
@@ -73,8 +65,8 @@ function getEventStyle(coinsDelta: number, tileName: string) {
     }
   }
   
-  // Spawn
-  if (tileName.includes("Spawn")) {
+  // Home
+  if (tileName.includes("Home")) {
     return {
       icon: Zap,
       bg: "from-emerald-600 to-green-700",

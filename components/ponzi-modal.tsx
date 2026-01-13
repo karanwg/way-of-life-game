@@ -8,8 +8,8 @@ interface PonziModalProps {
 }
 
 export function PonziModal({ data, onChoice }: PonziModalProps) {
-  const potentialGain = Math.floor(data.currentCoins * 0.5)
-  const potentialLoss = Math.floor(data.currentCoins * 0.5)
+  const potentialGain = data.currentCoins // Double = gain same amount
+  const potentialLoss = Math.floor(data.currentCoins / 2)
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -36,26 +36,26 @@ export function PonziModal({ data, onChoice }: PonziModalProps) {
         {/* Risk/Reward Info */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
-            <div className="text-green-400 text-sm mb-1">If You Win</div>
+            <div className="text-green-400 text-sm mb-1">If You Win (75%)</div>
             <div className="text-2xl font-bold text-green-400">
               +{potentialGain} 🪙
             </div>
-            <div className="text-xs text-gray-400 mt-1">50% of your coins</div>
+            <div className="text-xs text-gray-400 mt-1">Double your coins!</div>
           </div>
           <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
-            <div className="text-red-400 text-sm mb-1">If You Lose</div>
+            <div className="text-red-400 text-sm mb-1">If You Lose (25%)</div>
             <div className="text-2xl font-bold text-red-400">
               -{potentialLoss} 🪙
             </div>
-            <div className="text-xs text-gray-400 mt-1">50% of your coins</div>
+            <div className="text-xs text-gray-400 mt-1">Lose half</div>
           </div>
         </div>
 
         {/* Odds display */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 py-2">
-            <span className="text-yellow-400">⚖️</span>
-            <span className="text-yellow-300 font-semibold">50/50 Odds</span>
+          <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-full px-4 py-2">
+            <span className="text-green-400">🍀</span>
+            <span className="text-green-300 font-semibold">75% Win Rate!</span>
           </div>
         </div>
 
@@ -76,7 +76,7 @@ export function PonziModal({ data, onChoice }: PonziModalProps) {
         </div>
 
         <p className="text-center text-xs text-gray-500 mt-4">
-          "Trust me bro, this is totally legit"
+          "Trust me bro, the odds are in your favor"
         </p>
       </div>
     </div>

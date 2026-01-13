@@ -20,29 +20,29 @@ export function movePlayerForward(currentTileId: number, steps: number): number 
 }
 
 /**
- * Check if player passed Spawn (tile 0) during movement
+ * Check if player passed Home (tile 0) during movement
  * @param previousTileId - Tile ID before movement
  * @param newTileId - Tile ID after movement
- * @returns True if player crossed Spawn
+ * @returns True if player crossed Home
  */
-export function didPassSpawn(previousTileId: number, newTileId: number): boolean {
-  // Passed spawn if new tile is less than previous (wrapped around)
-  // but not if starting from spawn itself
+export function didPassHome(previousTileId: number, newTileId: number): boolean {
+  // Passed home if new tile is less than previous (wrapped around)
+  // but not if starting from home itself
   return newTileId < previousTileId && previousTileId !== 0
 }
 
 /**
- * Roll for marriage event (20% chance)
- * @returns True if marriage should occur
+ * Roll for identity theft event (25% chance)
+ * @returns True if identity theft should occur
  */
-export function rollMarriageChance(): boolean {
-  return Math.random() < 0.2
+export function rollIdentityTheftChance(): boolean {
+  return Math.random() < 0.25
 }
 
 /**
- * Roll for Ponzi scheme outcome (50/50)
- * @returns True if player wins (gains 50%), false if loses (loses 50%)
+ * Roll for Ponzi scheme outcome (75% win, 25% lose)
+ * @returns True if player wins (doubles coins), false if loses (loses half)
  */
 export function rollPonziOutcome(): boolean {
-  return Math.random() < 0.5
+  return Math.random() < 0.75
 }

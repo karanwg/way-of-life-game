@@ -9,6 +9,7 @@ interface AnimatedPawnProps {
   player: Player
   playerIndex: number
   isCurrentPlayer: boolean
+  allPlayers: Player[]
   onAnimationComplete?: () => void
 }
 
@@ -22,10 +23,34 @@ function getTilePosition(index: number) {
   return { x, y }
 }
 
+// Calculate horizontal offset for players on the same tile
+function getPlayerOffset(
+  playerId: string,
+  tileId: number,
+  allPlayers: Player[]
+): number {
+  // Find all players on this tile
+  const playersOnTile = allPlayers.filter((p) => p.currentTileId === tileId)
+  
+  if (playersOnTile.length <= 1) return 0
+  
+  // Find this player's index among players on this tile
+  const indexOnTile = playersOnTile.findIndex((p) => p.id === playerId)
+  
+  // Calculate offset: spread players evenly around center
+  // Each player gets offset by 2.5% of container width
+  const spacing = 2.5
+  const totalWidth = (playersOnTile.length - 1) * spacing
+  const startOffset = -totalWidth / 2
+  
+  return startOffset + indexOnTile * spacing
+}
+
 export function AnimatedPawn({
   player,
   playerIndex,
   isCurrentPlayer,
+  allPlayers,
   onAnimationComplete,
 }: AnimatedPawnProps) {
   const [displayTileId, setDisplayTileId] = useState(player.currentTileId)
@@ -96,6 +121,11 @@ export function AnimatedPawn({
   }, [player.currentTileId, onAnimationComplete])
 
   const pos = getTilePosition(displayTileId)
+  
+  // Calculate offset for side-by-side positioning (only when not hopping)
+  const horizontalOffset = isHopping 
+    ? 0 
+    : getPlayerOffset(player.id, displayTileId, allPlayers)
 
   return (
     <div
@@ -104,9 +134,11 @@ export function AnimatedPawn({
         ${isHopping ? "animate-pawn-hop" : ""}
       `}
       style={{
-        left: `${pos.x}%`,
+        left: `${pos.x + horizontalOffset}%`,
         top: `${pos.y + 8}%`, // Offset below the tile
-        transition: isHopping ? "left 0.25s ease-out, top 0.25s ease-out" : "none",
+        transition: isHopping 
+          ? "left 0.25s ease-out, top 0.25s ease-out" 
+          : "left 0.3s ease-out, top 0.3s ease-out",
       }}
     >
       <PlayerPawn
