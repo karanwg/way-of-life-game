@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { RoomLobby } from "@/components/room-lobby"
 import { QuizScreen } from "@/components/quiz-screen"
 import { Leaderboard } from "@/components/leaderboard"
@@ -13,6 +13,7 @@ import { HeistModal } from "@/components/heist-modal"
 import { PonziModal } from "@/components/ponzi-modal"
 import { PoliceModal } from "@/components/police-modal"
 import { GameEventToast } from "@/components/game-event-toast"
+import { FlyingCoins } from "@/components/flying-coins"
 import { usePeerGame, type MoveResultForUI } from "@/hooks/use-peer-game"
 import type { Player } from "@/lib/types"
 import type { HeistPromptData, PonziPromptData, PolicePromptData, HeistResultData, PonziResultData, PoliceResultData, IdentityTheftResultData } from "@/lib/p2p-types"
@@ -38,8 +39,23 @@ export default function Home() {
   const [policeResult, setPoliceResult] = useState<PoliceResultData | null>(null)
   const [identityTheftResult, setIdentityTheftResult] = useState<IdentityTheftResultData | null>(null)
 
+  // Flying coins animation
+  const [flyingCoins, setFlyingCoins] = useState<{
+    fromPlayerId: string
+    toPlayerId: string
+    amount: number
+  } | null>(null)
+
+  // Ref to access latest players in callbacks
+  const allPlayersRef = useRef<Player[]>([])
+  
+  useEffect(() => {
+    allPlayersRef.current = allPlayers
+  }, [allPlayers])
+
   const handlePlayersUpdate = useCallback((players: Player[]) => {
     setAllPlayers(players)
+    allPlayersRef.current = players
   }, [])
 
   const handleError = useCallback((error: string) => {
@@ -63,6 +79,7 @@ export default function Home() {
     setPonziResult(null)
     setPoliceResult(null)
     setIdentityTheftResult(null)
+    setFlyingCoins(null)
   }, [])
 
   const handleGameReset = useCallback(() => {
@@ -79,6 +96,7 @@ export default function Home() {
     setPonziResult(null)
     setPoliceResult(null)
     setIdentityTheftResult(null)
+    setFlyingCoins(null)
   }, [])
 
   const handleHeistPrompt = useCallback((data: HeistPromptData) => {
@@ -95,7 +113,25 @@ export default function Home() {
 
   const handleHeistResult = useCallback((result: HeistResultData) => {
     setHeistPrompt(null)
-    setHeistResult(result)
+    
+    // Trigger flying coins animation
+    const players = allPlayersRef.current
+    const thief = players.find((p) => p.name === result.thiefName)
+    const victim = players.find((p) => p.name === result.victimName)
+    
+    if (thief && victim && result.amountStolen > 0) {
+      setFlyingCoins({
+        fromPlayerId: victim.id,
+        toPlayerId: thief.id,
+        amount: result.amountStolen,
+      })
+      // Delay showing the toast until animation completes
+      setTimeout(() => {
+        setHeistResult(result)
+      }, 600)
+    } else {
+      setHeistResult(result)
+    }
   }, [])
 
   const handlePonziResult = useCallback((result: PonziResultData) => {
@@ -257,6 +293,19 @@ export default function Home() {
         {/* Board - 75% width */}
         <div className="h-full relative" style={{ width: "75%" }}>
           <Board players={allPlayers} currentPlayerId={myPlayerId} />
+
+          {/* Flying Coins Animation */}
+          {flyingCoins && (
+            <div className="absolute inset-0 rounded-2xl overflow-hidden">
+              <FlyingCoins
+                fromPlayerId={flyingCoins.fromPlayerId}
+                toPlayerId={flyingCoins.toPlayerId}
+                amount={flyingCoins.amount}
+                players={allPlayers}
+                onComplete={() => setFlyingCoins(null)}
+              />
+            </div>
+          )}
 
           {/* Dice overlay on board */}
           {diceState.value !== null && (

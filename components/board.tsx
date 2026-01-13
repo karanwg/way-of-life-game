@@ -9,6 +9,14 @@ interface BoardProps {
   currentPlayerId: string
 }
 
+// Pre-generate star positions (stable across renders)
+const STAR_POSITIONS = Array.from({ length: 50 }, (_, i) => ({
+  id: i,
+  left: `${(i * 37 + 13) % 100}%`,
+  top: `${(i * 53 + 7) % 100}%`,
+  delay: `${(i % 5) * 0.6}s`,
+}))
+
 // Get tile-specific colors based on effect
 function getTileColors(effect: string, coins?: number) {
   switch (effect) {
@@ -53,14 +61,14 @@ export function Board({ players, currentPlayerId }: BoardProps) {
     <div className="w-full h-full relative bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 rounded-2xl p-2">
       {/* Starfield background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(50)].map((_, i) => (
+        {STAR_POSITIONS.map((star) => (
           <div
-            key={i}
+            key={star.id}
             className="absolute w-1 h-1 bg-white rounded-full opacity-40"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
+              left: star.left,
+              top: star.top,
+              animationDelay: star.delay,
             }}
           />
         ))}
