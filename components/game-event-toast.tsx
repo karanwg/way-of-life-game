@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react"
 import type { HeistResultData, PonziResultData, PoliceResultData, IdentityTheftResultData } from "@/lib/p2p-types"
 
-interface GameEventToastProps {
+export interface GameEventToastProps {
   heistResult?: HeistResultData | null
   ponziResult?: PonziResultData | null
   policeResult?: PoliceResultData | null
   identityTheftResult?: IdentityTheftResultData | null
+  myPlayerName?: string
   onDismiss: () => void
 }
 
@@ -16,27 +17,52 @@ export function GameEventToast({
   ponziResult,
   policeResult,
   identityTheftResult,
+  myPlayerName,
   onDismiss,
 }: GameEventToastProps) {
   const [isVisible, setIsVisible] = useState(false)
 
   const hasEvent = heistResult || ponziResult || policeResult || identityTheftResult
 
+  // Check if I'm the victim
+  const isVictim = 
+    (heistResult && heistResult.victimName === myPlayerName) ||
+    (policeResult && policeResult.victimName === myPlayerName)
+
   useEffect(() => {
     if (hasEvent) {
       setIsVisible(true)
+      // Show longer if you're the victim
+      const duration = isVictim ? 5000 : 4000
       const timer = setTimeout(() => {
         setIsVisible(false)
         setTimeout(onDismiss, 300)
-      }, 4000)
+      }, duration)
       return () => clearTimeout(timer)
     }
-  }, [hasEvent, onDismiss])
+  }, [hasEvent, isVictim, onDismiss])
 
   if (!hasEvent) return null
 
   const renderContent = () => {
     if (heistResult) {
+      const iAmVictim = heistResult.victimName === myPlayerName
+      
+      if (iAmVictim) {
+        return (
+          <div className="flex items-center gap-4">
+            <div className="text-5xl animate-bounce">🚨</div>
+            <div>
+              <div className="font-black text-red-400 text-xl">YOU GOT ROBBED!</div>
+              <div className="text-base text-white mt-1">
+                <span className="text-red-300 font-bold">{heistResult.thiefName}</span> stole{" "}
+                <span className="text-yellow-400 font-black text-lg">{heistResult.amountStolen} 🪙</span> from you!
+              </div>
+            </div>
+          </div>
+        )
+      }
+      
       return (
         <div className="flex items-center gap-3">
           <div className="text-3xl">💰</div>
@@ -88,6 +114,25 @@ export function GameEventToast({
     }
 
     if (policeResult) {
+      const iAmVictim = policeResult.victimName === myPlayerName
+      
+      if (iAmVictim) {
+        return (
+          <div className="flex items-center gap-4">
+            <div className="text-5xl animate-bounce">🚔</div>
+            <div>
+              <div className="font-black text-red-400 text-xl">YOU GOT SNITCHED ON!</div>
+              <div className="text-base text-white mt-1">
+                <span className="text-blue-300 font-bold">{policeResult.snitchName}</span> reported you!
+              </div>
+              <div className="text-red-400 font-black text-lg mt-1">
+                You lost {policeResult.coinsLost} 🪙
+              </div>
+            </div>
+          </div>
+        )
+      }
+      
       return (
         <div className="flex items-center gap-3">
           <div className="text-3xl">🚔</div>
@@ -106,6 +151,40 @@ export function GameEventToast({
     }
 
     if (identityTheftResult) {
+      const iAmInvolved = 
+        identityTheftResult.player1Name === myPlayerName || 
+        identityTheftResult.player2Name === myPlayerName
+      
+      if (iAmInvolved) {
+        const myOldCoins = identityTheftResult.player1Name === myPlayerName 
+          ? identityTheftResult.player1OldCoins 
+          : identityTheftResult.player2OldCoins
+        const myNewCoins = identityTheftResult.player1Name === myPlayerName 
+          ? identityTheftResult.player1NewCoins 
+          : identityTheftResult.player2NewCoins
+        const otherPlayer = identityTheftResult.player1Name === myPlayerName 
+          ? identityTheftResult.player2Name 
+          : identityTheftResult.player1Name
+        const gained = myNewCoins > myOldCoins
+        
+        return (
+          <div className="flex items-center gap-4">
+            <div className="text-5xl animate-bounce">🎭</div>
+            <div>
+              <div className={`font-black text-xl ${gained ? "text-green-400" : "text-red-400"}`}>
+                IDENTITY THEFT!
+              </div>
+              <div className="text-base text-white mt-1">
+                You swapped coins with <span className="text-purple-300 font-bold">{otherPlayer}</span>!
+              </div>
+              <div className={`font-black text-lg mt-1 ${gained ? "text-green-400" : "text-red-400"}`}>
+                {myOldCoins} → {myNewCoins} 🪙
+              </div>
+            </div>
+          </div>
+        )
+      }
+      
       return (
         <div className="flex items-center gap-3">
           <div className="text-3xl">🎭</div>
@@ -127,11 +206,24 @@ export function GameEventToast({
   }
 
   const getBorderColor = () => {
+    if (isVictim) return "border-red-500"
     if (heistResult) return "border-red-500/50"
     if (ponziResult) return ponziResult.won ? "border-green-500/50" : "border-red-500/50"
     if (policeResult) return "border-blue-500/50"
-    if (identityTheftResult) return "border-purple-500/50"
+    if (identityTheftResult) {
+      const iAmInvolved = 
+        identityTheftResult.player1Name === myPlayerName || 
+        identityTheftResult.player2Name === myPlayerName
+      return iAmInvolved ? "border-purple-500" : "border-purple-500/50"
+    }
     return "border-purple-500/50"
+  }
+
+  const getBackground = () => {
+    if (isVictim) {
+      return "bg-gradient-to-r from-red-950/95 to-rose-900/95"
+    }
+    return "bg-gradient-to-r from-gray-900/95 to-slate-900/95"
   }
 
   return (
@@ -145,8 +237,9 @@ export function GameEventToast({
       <div
         className={`
           px-6 py-4 rounded-xl border-2 ${getBorderColor()}
-          bg-gradient-to-r from-gray-900/95 to-slate-900/95
+          ${getBackground()}
           backdrop-blur-sm shadow-xl
+          ${isVictim ? "animate-pulse ring-2 ring-red-500/50" : ""}
         `}
       >
         {renderContent()}

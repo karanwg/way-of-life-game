@@ -128,7 +128,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           const player = engine.addPlayer(playerId, message.playerName)
           const allPlayers = engine.getAllPlayers()
 
-          conn.metadata = { playerId }
+          ;(conn as any).metadata = { playerId }
           connectionsRef.current.set(playerId, conn)
 
           conn.send({ type: "JOIN_ACCEPTED", playerId, player, allPlayers })
@@ -160,12 +160,15 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           if (result) {
             const allPlayers = engine.getAllPlayers()
             
+            // Don't include tileEvent if there's an interactive prompt (to avoid double modals)
+            const hasInteractivePrompt = result.heistPrompt || result.ponziPrompt || result.policePrompt
+            
             broadcastToGuests({
               type: "MOVE_RESULT",
               playerId: message.playerId,
               dieRoll: result.dieRoll,
               lapBonus: result.lapBonus,
-              tileEvent: result.tileEvent,
+              tileEvent: hasInteractivePrompt ? null : result.tileEvent,
               allPlayers,
             })
 
@@ -518,7 +521,9 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           const result = gameEngineRef.current.advanceQuestion(myPlayerId, wasCorrect)
           if (result) {
             const allPlayers = gameEngineRef.current.getAllPlayers()
-            broadcastToGuests({ type: "MOVE_RESULT", playerId: myPlayerId, dieRoll: result.dieRoll, lapBonus: result.lapBonus, tileEvent: result.tileEvent, allPlayers })
+            // Don't include tileEvent if there's an interactive prompt (to avoid double modals)
+            const hasInteractivePrompt = result.heistPrompt || result.ponziPrompt || result.policePrompt
+            broadcastToGuests({ type: "MOVE_RESULT", playerId: myPlayerId, dieRoll: result.dieRoll, lapBonus: result.lapBonus, tileEvent: hasInteractivePrompt ? null : result.tileEvent, allPlayers })
 
             if (result.heistPrompt) options.onHeistPrompt?.(result.heistPrompt)
             if (result.ponziPrompt) options.onPonziPrompt?.(result.ponziPrompt)
@@ -530,9 +535,14 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
 
             setRoomState((prev) => ({ ...prev, players: allPlayers }))
             options.onPlayersUpdate?.(allPlayers)
-            options.onMoveResult?.({ playerId: myPlayerId, ...result })
+            
+            // Exclude tileEvent from the result if there's an interactive prompt
+            const resultForUI = hasInteractivePrompt 
+              ? { ...result, tileEvent: null }
+              : result
+            options.onMoveResult?.({ playerId: myPlayerId, ...resultForUI })
             updateMyPlayer(allPlayers)
-            resolve(result)
+            resolve(resultForUI)
           } else {
             resolve({ dieRoll: null, lapBonus: null, tileEvent: null })
           }

@@ -319,6 +319,7 @@ export default function Home() {
         ponziResult={ponziResult}
         policeResult={policeResult}
         identityTheftResult={identityTheftResult}
+        myPlayerName={myPlayer?.name}
         onDismiss={clearEventToasts}
       />
     </div>
