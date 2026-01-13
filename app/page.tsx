@@ -118,8 +118,19 @@ export default function Home() {
     setPolicePrompt(data)
   }, [])
 
+  // Helper to clear all toasts before showing new ones
+  const clearAllToasts = useCallback(() => {
+    setHeistResult(null)
+    setPonziResult(null)
+    setPoliceResult(null)
+    setIdentityTheftResult(null)
+    setLapBonus(null)
+    setEventCard(null)
+  }, [])
+
   const handleHeistResult = useCallback((result: HeistResultData) => {
     setHeistPrompt(null)
+    clearAllToasts()
     
     // Trigger flying coins animation
     const players = allPlayersRef.current
@@ -139,21 +150,24 @@ export default function Home() {
     } else {
       setHeistResult(result)
     }
-  }, [])
+  }, [clearAllToasts])
 
   const handlePonziResult = useCallback((result: PonziResultData) => {
     setPonziPrompt(null)
+    clearAllToasts()
     setPonziResult(result)
-  }, [])
+  }, [clearAllToasts])
 
   const handlePoliceResult = useCallback((result: PoliceResultData) => {
     setPolicePrompt(null)
+    clearAllToasts()
     setPoliceResult(result)
-  }, [])
+  }, [clearAllToasts])
 
   const handleIdentityTheftEvent = useCallback((result: IdentityTheftResultData) => {
+    clearAllToasts()
     setIdentityTheftResult(result)
-  }, [])
+  }, [clearAllToasts])
 
   const {
     roomState,
@@ -202,6 +216,7 @@ export default function Home() {
       // Handle lap bonus display
       if (result.lapBonus && wasCorrect) {
         setTimeout(() => {
+          clearAllToasts()
           setLapBonus(result.lapBonus)
         }, 1200)
       }
@@ -212,6 +227,7 @@ export default function Home() {
       // Handle tile event display (after dice animation) - but NOT for interactive tiles
       if (result.tileEvent && wasCorrect && !hasInteractivePrompt) {
         setTimeout(() => {
+          clearAllToasts()
           setEventCard({
             tileName: result.tileEvent!.tileName,
             tileText: result.tileEvent!.tileText,
@@ -231,7 +247,7 @@ export default function Home() {
         } : null,
       }
     },
-    [advanceQuestion]
+    [advanceQuestion, clearAllToasts]
   )
 
   const handleSessionExpired = useCallback(() => {

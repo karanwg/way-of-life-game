@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import type { HeistResultData, PonziResultData, PoliceResultData, IdentityTheftResultData } from "@/lib/p2p-types"
 
-export interface GameEventToastProps {
+interface GameEventToastProps {
   heistResult?: HeistResultData | null
   ponziResult?: PonziResultData | null
   policeResult?: PoliceResultData | null
@@ -22,182 +22,133 @@ export function GameEventToast({
 }: GameEventToastProps) {
   const [isVisible, setIsVisible] = useState(false)
 
-  const hasEvent = heistResult || ponziResult || policeResult || identityTheftResult
+  // Only show events that involve the current player
+  const isMyHeist = heistResult && (heistResult.thiefName === myPlayerName || heistResult.victimName === myPlayerName)
+  const isMyPonzi = ponziResult && ponziResult.playerName === myPlayerName
+  const isMyPolice = policeResult && (policeResult.snitchName === myPlayerName || policeResult.victimName === myPlayerName)
+  const isMyIdentityTheft = identityTheftResult && (identityTheftResult.player1Name === myPlayerName || identityTheftResult.player2Name === myPlayerName)
 
-  // Check if I'm the victim
-  const isVictim = 
-    (heistResult && heistResult.victimName === myPlayerName) ||
-    (policeResult && policeResult.victimName === myPlayerName)
+  const hasRelevantEvent = isMyHeist || isMyPonzi || isMyPolice || isMyIdentityTheft
 
   useEffect(() => {
-    if (hasEvent) {
+    if (hasRelevantEvent) {
       setIsVisible(true)
-      // Show longer if you're the victim
-      const duration = isVictim ? 5000 : 4000
       const timer = setTimeout(() => {
         setIsVisible(false)
         setTimeout(onDismiss, 300)
-      }, duration)
+      }, 3000)
       return () => clearTimeout(timer)
+    } else {
+      // Dismiss immediately if not relevant to me
+      onDismiss()
     }
-  }, [hasEvent, isVictim, onDismiss])
+  }, [hasRelevantEvent, onDismiss])
 
-  if (!hasEvent) return null
+  if (!hasRelevantEvent) return null
 
   const renderContent = () => {
-    if (heistResult) {
+    if (isMyHeist && heistResult) {
       const iAmVictim = heistResult.victimName === myPlayerName
+      const iAmThief = heistResult.thiefName === myPlayerName
       
       if (iAmVictim) {
         return (
-          <div className="flex items-center gap-4">
-            <div className="text-5xl animate-bounce">🚨</div>
-            <div>
-              <div className="font-black text-red-400 text-xl">YOU GOT ROBBED!</div>
-              <div className="text-base text-white mt-1">
-                <span className="text-red-300 font-bold">{heistResult.thiefName}</span> stole{" "}
-                <span className="text-yellow-400 font-black text-lg">{heistResult.amountStolen} 🪙</span> from you!
-              </div>
-            </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span>💸</span>
+            <span className="text-gray-300">
+              <span className="text-red-400 font-semibold">{heistResult.thiefName}</span> stole{" "}
+              <span className="text-yellow-400 font-semibold">{heistResult.amountStolen}</span> coins from you
+            </span>
           </div>
         )
       }
       
-      return (
-        <div className="flex items-center gap-3">
-          <div className="text-3xl">💰</div>
-          <div>
-            <div className="font-bold text-red-400">Heist Complete!</div>
-            <div className="text-sm text-gray-300">
-              <span className="text-white font-semibold">{heistResult.thiefName}</span> stole{" "}
-              <span className="text-yellow-400 font-bold">{heistResult.amountStolen} 🪙</span> from{" "}
+      if (iAmThief) {
+        return (
+          <div className="flex items-center gap-2 text-sm">
+            <span>💰</span>
+            <span className="text-gray-300">
+              You stole <span className="text-green-400 font-semibold">{heistResult.amountStolen}</span> coins from{" "}
               <span className="text-white font-semibold">{heistResult.victimName}</span>
-            </div>
+            </span>
           </div>
-        </div>
-      )
+        )
+      }
     }
 
-    if (ponziResult) {
+    if (isMyPonzi && ponziResult) {
       if (!ponziResult.invested) {
         return (
-          <div className="flex items-center gap-3">
-            <div className="text-3xl">🚶</div>
-            <div>
-              <div className="font-bold text-gray-400">Skipped the Scheme</div>
-              <div className="text-sm text-gray-300">
-                <span className="text-white font-semibold">{ponziResult.playerName}</span> walked away safely
-              </div>
-            </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span>🚶</span>
+            <span className="text-gray-300">You skipped the scheme</span>
           </div>
         )
       }
       
       const won = ponziResult.won
       return (
-        <div className="flex items-center gap-3">
-          <div className="text-3xl">{won ? "🎉" : "💸"}</div>
-          <div>
-            <div className={`font-bold ${won ? "text-green-400" : "text-red-400"}`}>
-              {won ? "Jackpot! Coins Doubled!" : "Scheme Collapsed!"}
-            </div>
-            <div className="text-sm text-gray-300">
-              <span className="text-white font-semibold">{ponziResult.playerName}</span>{" "}
-              {won ? "gained" : "lost"}{" "}
-              <span className={`font-bold ${won ? "text-green-400" : "text-red-400"}`}>
-                {Math.abs(ponziResult.coinsChange || 0)} 🪙
-              </span>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span>{won ? "🎉" : "💸"}</span>
+          <span className="text-gray-300">
+            {won ? "Jackpot! " : "Scheme collapsed! "}
+            <span className={won ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
+              {won ? "+" : ""}{ponziResult.coinsChange}
+            </span> coins
+          </span>
         </div>
       )
     }
 
-    if (policeResult) {
+    if (isMyPolice && policeResult) {
       const iAmVictim = policeResult.victimName === myPlayerName
+      const iAmSnitch = policeResult.snitchName === myPlayerName
       
       if (iAmVictim) {
         return (
-          <div className="flex items-center gap-4">
-            <div className="text-5xl animate-bounce">🚔</div>
-            <div>
-              <div className="font-black text-red-400 text-xl">YOU GOT SNITCHED ON!</div>
-              <div className="text-base text-white mt-1">
-                <span className="text-blue-300 font-bold">{policeResult.snitchName}</span> reported you!
-              </div>
-              <div className="text-red-400 font-black text-lg mt-1">
-                You lost {policeResult.coinsLost} 🪙
-              </div>
-            </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span>🚔</span>
+            <span className="text-gray-300">
+              <span className="text-blue-400 font-semibold">{policeResult.snitchName}</span> snitched on you!{" "}
+              <span className="text-red-400 font-semibold">-{policeResult.coinsLost}</span> coins
+            </span>
           </div>
         )
       }
       
-      return (
-        <div className="flex items-center gap-3">
-          <div className="text-3xl">🚔</div>
-          <div>
-            <div className="font-bold text-blue-400">Someone Got Snitched On!</div>
-            <div className="text-sm text-gray-300">
-              <span className="text-white font-semibold">{policeResult.snitchName}</span> reported{" "}
-              <span className="text-white font-semibold">{policeResult.victimName}</span>
-            </div>
-            <div className="text-xs text-red-400 mt-1">
-              {policeResult.victimName} lost {policeResult.coinsLost} 🪙
-            </div>
+      if (iAmSnitch) {
+        return (
+          <div className="flex items-center gap-2 text-sm">
+            <span>🚔</span>
+            <span className="text-gray-300">
+              You reported <span className="text-white font-semibold">{policeResult.victimName}</span>
+            </span>
           </div>
-        </div>
-      )
+        )
+      }
     }
 
-    if (identityTheftResult) {
-      const iAmInvolved = 
-        identityTheftResult.player1Name === myPlayerName || 
-        identityTheftResult.player2Name === myPlayerName
-      
-      if (iAmInvolved) {
-        const myOldCoins = identityTheftResult.player1Name === myPlayerName 
-          ? identityTheftResult.player1OldCoins 
-          : identityTheftResult.player2OldCoins
-        const myNewCoins = identityTheftResult.player1Name === myPlayerName 
-          ? identityTheftResult.player1NewCoins 
-          : identityTheftResult.player2NewCoins
-        const otherPlayer = identityTheftResult.player1Name === myPlayerName 
-          ? identityTheftResult.player2Name 
-          : identityTheftResult.player1Name
-        const gained = myNewCoins > myOldCoins
-        
-        return (
-          <div className="flex items-center gap-4">
-            <div className="text-5xl animate-bounce">🎭</div>
-            <div>
-              <div className={`font-black text-xl ${gained ? "text-green-400" : "text-red-400"}`}>
-                IDENTITY THEFT!
-              </div>
-              <div className="text-base text-white mt-1">
-                You swapped coins with <span className="text-purple-300 font-bold">{otherPlayer}</span>!
-              </div>
-              <div className={`font-black text-lg mt-1 ${gained ? "text-green-400" : "text-red-400"}`}>
-                {myOldCoins} → {myNewCoins} 🪙
-              </div>
-            </div>
-          </div>
-        )
-      }
+    if (isMyIdentityTheft && identityTheftResult) {
+      const myOldCoins = identityTheftResult.player1Name === myPlayerName 
+        ? identityTheftResult.player1OldCoins 
+        : identityTheftResult.player2OldCoins
+      const myNewCoins = identityTheftResult.player1Name === myPlayerName 
+        ? identityTheftResult.player1NewCoins 
+        : identityTheftResult.player2NewCoins
+      const otherPlayer = identityTheftResult.player1Name === myPlayerName 
+        ? identityTheftResult.player2Name 
+        : identityTheftResult.player1Name
+      const gained = myNewCoins > myOldCoins
       
       return (
-        <div className="flex items-center gap-3">
-          <div className="text-3xl">🎭</div>
-          <div>
-            <div className="font-bold text-purple-400">Identity Theft!</div>
-            <div className="text-sm text-gray-300">
-              <span className="text-white font-semibold">{identityTheftResult.player1Name}</span> and{" "}
-              <span className="text-white font-semibold">{identityTheftResult.player2Name}</span> swapped coins!
-            </div>
-            <div className="text-xs text-gray-400 mt-1">
-              {identityTheftResult.player1Name}: {identityTheftResult.player1OldCoins} → {identityTheftResult.player1NewCoins} 🪙
-            </div>
-          </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span>🎭</span>
+          <span className="text-gray-300">
+            Identity theft! Swapped coins with <span className="text-purple-400 font-semibold">{otherPlayer}</span>{" "}
+            <span className={gained ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
+              ({myOldCoins} → {myNewCoins})
+            </span>
+          </span>
         </div>
       )
     }
@@ -205,43 +156,15 @@ export function GameEventToast({
     return null
   }
 
-  const getBorderColor = () => {
-    if (isVictim) return "border-red-500"
-    if (heistResult) return "border-red-500/50"
-    if (ponziResult) return ponziResult.won ? "border-green-500/50" : "border-red-500/50"
-    if (policeResult) return "border-blue-500/50"
-    if (identityTheftResult) {
-      const iAmInvolved = 
-        identityTheftResult.player1Name === myPlayerName || 
-        identityTheftResult.player2Name === myPlayerName
-      return iAmInvolved ? "border-purple-500" : "border-purple-500/50"
-    }
-    return "border-purple-500/50"
-  }
-
-  const getBackground = () => {
-    if (isVictim) {
-      return "bg-gradient-to-r from-red-950/95 to-rose-900/95"
-    }
-    return "bg-gradient-to-r from-gray-900/95 to-slate-900/95"
-  }
-
   return (
     <div
       className={`
-        fixed top-20 left-1/2 -translate-x-1/2 z-40
+        fixed bottom-4 left-1/2 -translate-x-1/2 z-40
         transition-all duration-300 ease-out
-        ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}
+        ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
       `}
     >
-      <div
-        className={`
-          px-6 py-4 rounded-xl border-2 ${getBorderColor()}
-          ${getBackground()}
-          backdrop-blur-sm shadow-xl
-          ${isVictim ? "animate-pulse ring-2 ring-red-500/50" : ""}
-        `}
-      >
+      <div className="px-4 py-2 rounded-lg bg-gray-900/90 border border-gray-700/50 shadow-lg backdrop-blur-sm">
         {renderContent()}
       </div>
     </div>
