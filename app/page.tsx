@@ -14,6 +14,7 @@ import { PonziModal } from "@/components/ponzi-modal"
 import { PoliceModal } from "@/components/police-modal"
 import { GameEventToast } from "@/components/game-event-toast"
 import { FlyingCoins } from "@/components/flying-coins"
+import { GameCountdown } from "@/components/game-countdown"
 import { usePeerGame, type MoveResultForUI } from "@/hooks/use-peer-game"
 import type { Player } from "@/lib/types"
 import type { HeistPromptData, PonziPromptData, PolicePromptData, HeistResultData, PonziResultData, PoliceResultData, IdentityTheftResultData } from "@/lib/p2p-types"
@@ -45,6 +46,9 @@ export default function Home() {
     toPlayerId: string
     amount: number
   } | null>(null)
+
+  // Game start countdown
+  const [showCountdown, setShowCountdown] = useState(false)
 
   // Ref to access latest players in callbacks
   const allPlayersRef = useRef<Player[]>([])
@@ -80,6 +84,8 @@ export default function Home() {
     setPoliceResult(null)
     setIdentityTheftResult(null)
     setFlyingCoins(null)
+    // Show countdown when game starts
+    setShowCountdown(true)
   }, [])
 
   const handleGameReset = useCallback(() => {
@@ -97,6 +103,7 @@ export default function Home() {
     setPoliceResult(null)
     setIdentityTheftResult(null)
     setFlyingCoins(null)
+    setShowCountdown(false)
   }, [])
 
   const handleHeistPrompt = useCallback((data: HeistPromptData) => {
@@ -328,16 +335,20 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Bottom section - 35% height: Quiz */}
+      {/* Bottom section - 35% height: Quiz or Countdown */}
       <div className="flex-1 p-3 pt-0" style={{ height: "35%" }}>
         <div className="h-full bg-gradient-to-br from-purple-900/50 to-indigo-900/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-3 overflow-hidden">
-          <QuizScreen
-            player={myPlayer}
-            onAnswer={handleAnswer}
-            onNextQuestion={handleNextQuestion}
-            onDiceRoll={handleDiceRoll}
-            onSessionExpired={handleSessionExpired}
-          />
+          {showCountdown ? (
+            <GameCountdown onComplete={() => setShowCountdown(false)} />
+          ) : (
+            <QuizScreen
+              player={myPlayer}
+              onAnswer={handleAnswer}
+              onNextQuestion={handleNextQuestion}
+              onDiceRoll={handleDiceRoll}
+              onSessionExpired={handleSessionExpired}
+            />
+          )}
         </div>
       </div>
 
