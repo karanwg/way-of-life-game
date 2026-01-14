@@ -11,6 +11,8 @@ interface AnimatedPawnProps {
   isCurrentPlayer: boolean
   allPlayers: Player[]
   onAnimationComplete?: () => void
+  /** Delay before starting movement animation (ms). Used to wait for dice animation. */
+  startDelay?: number
 }
 
 // Calculate elliptical positions for 12 tiles (same as Board)
@@ -46,12 +48,17 @@ function getPlayerOffset(
   return startOffset + indexOnTile * spacing
 }
 
+// Delay before pawn starts hopping - must wait for full dice sequence:
+// 700ms rolling + 1000ms showing result + 200ms buffer = 1900ms
+const DEFAULT_START_DELAY = 1900
+
 export function AnimatedPawn({
   player,
   playerIndex,
   isCurrentPlayer,
   allPlayers,
   onAnimationComplete,
+  startDelay = DEFAULT_START_DELAY,
 }: AnimatedPawnProps) {
   const [displayTileId, setDisplayTileId] = useState(player.currentTileId)
   const [isHopping, setIsHopping] = useState(false)
@@ -114,11 +121,11 @@ export function AnimatedPawn({
       }, HOP_DURATION)
     }
 
-    // Start animation after a brief delay
+    // Start animation after delay (to wait for dice animation)
     setTimeout(() => {
       animateStep(0)
-    }, 100)
-  }, [player.currentTileId, onAnimationComplete])
+    }, startDelay)
+  }, [player.currentTileId, onAnimationComplete, startDelay])
 
   const pos = getTilePosition(displayTileId)
   

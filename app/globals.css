@@ -303,4 +303,40 @@
   .animate-pawn-hop {
     animation: pawn-hop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
+
+  .animate-pulse-slow {
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  .animate-spin-slow {
+    animation: spin 2s linear infinite;
+  }
+
+  .animate-bounce-horizontal {
+    animation: bounce-horizontal 0.6s ease-in-out infinite;
+  }
+
+  .animate-float-up {
+    animation: float-up 2s ease-out forwards;
+  }
+}
+
+@keyframes bounce-horizontal {
+  0%, 100% {
+    transform: translateX(-5px);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) rotate(360deg);
+    opacity: 0;
+  }
 }

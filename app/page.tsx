@@ -15,19 +15,29 @@ import { PoliceModal } from "@/components/police-modal"
 import { GameEventToast } from "@/components/game-event-toast"
 import { FlyingCoins } from "@/components/flying-coins"
 import { GameCountdown } from "@/components/game-countdown"
+import { IdentityTheftModal } from "@/components/identity-theft-modal"
 import { usePeerGame, type MoveResultForUI } from "@/hooks/use-peer-game"
 import type { Player } from "@/lib/types"
 import type { HeistPromptData, PonziPromptData, PolicePromptData, HeistResultData, PonziResultData, PoliceResultData, IdentityTheftResultData } from "@/lib/p2p-types"
 import { QUESTIONS } from "@/lib/questions"
 
+type ActiveView = "quiz" | "board"
+
 export default function Home() {
+  // Actual game state (updates immediately)
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
+  // Display state for board (delayed during dice animation)
+  const [displayPlayers, setDisplayPlayers] = useState<Player[]>([])
+  
   const [eventCard, setEventCard] = useState<EventCardData | null>(null)
   const [lapBonus, setLapBonus] = useState<LapBonusData | null>(null)
   const [diceState, setDiceState] = useState<{ value: number | null; isRolling: boolean }>({
     value: null,
     isRolling: false,
   })
+  
+  // View state - quiz or board
+  const [activeView, setActiveView] = useState<ActiveView>("quiz")
 
   // Interactive prompts
   const [heistPrompt, setHeistPrompt] = useState<HeistPromptData | null>(null)
@@ -53,12 +63,41 @@ export default function Home() {
   // Ref to access latest players in callbacks
   const allPlayersRef = useRef<Player[]>([])
   
+  // Ref for return-to-quiz timeout
+  const returnToQuizTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Track if there's a pending interactive prompt (to block return to quiz)
+  const hasPendingPromptRef = useRef(false)
+  
+  
   useEffect(() => {
     allPlayersRef.current = allPlayers
   }, [allPlayers])
+  
+  // Schedule return to quiz view (used after events resolve)
+  const scheduleReturnToQuiz = useCallback((delayMs: number = 2000) => {
+    // Don't schedule if there's a pending interactive prompt
+    if (hasPendingPromptRef.current) {
+      return
+    }
+    if (returnToQuizTimeoutRef.current) {
+      clearTimeout(returnToQuizTimeoutRef.current)
+    }
+    returnToQuizTimeoutRef.current = setTimeout(() => {
+      setActiveView("quiz")
+    }, delayMs)
+  }, [])
+  
+  const cancelReturnToQuiz = useCallback(() => {
+    if (returnToQuizTimeoutRef.current) {
+      clearTimeout(returnToQuizTimeoutRef.current)
+      returnToQuizTimeoutRef.current = null
+    }
+  }, [])
 
   const handlePlayersUpdate = useCallback((players: Player[]) => {
     setAllPlayers(players)
+    setDisplayPlayers(players) // Always update immediately - AnimatedPawn handles delay
     allPlayersRef.current = players
   }, [])
 
@@ -84,12 +123,14 @@ export default function Home() {
     setPoliceResult(null)
     setIdentityTheftResult(null)
     setFlyingCoins(null)
-    // Show countdown when game starts
+    // Show countdown when game starts (on board view)
+    setActiveView("board")
     setShowCountdown(true)
   }, [])
 
   const handleGameReset = useCallback(() => {
     setAllPlayers([])
+    setDisplayPlayers([])
     setEventCard(null)
     setLapBonus(null)
     setDiceState({ value: null, isRolling: false })
@@ -104,19 +145,39 @@ export default function Home() {
     setIdentityTheftResult(null)
     setFlyingCoins(null)
     setShowCountdown(false)
+    setActiveView("quiz")
+    hasPendingPromptRef.current = false
   }, [])
+
+  // Delay for pawn animation: 1900ms start delay + (350ms hop + 80ms pause) * 4 tiles max + buffer
+  const PAWN_ANIMATION_DELAY = 4000
 
   const handleHeistPrompt = useCallback((data: HeistPromptData) => {
-    setHeistPrompt(data)
-  }, [])
+    hasPendingPromptRef.current = true // Block return to quiz
+    cancelReturnToQuiz()
+    // Delay showing modal until pawn animation completes
+    setTimeout(() => {
+      setHeistPrompt(data)
+    }, PAWN_ANIMATION_DELAY)
+  }, [cancelReturnToQuiz])
 
   const handlePonziPrompt = useCallback((data: PonziPromptData) => {
-    setPonziPrompt(data)
-  }, [])
+    hasPendingPromptRef.current = true // Block return to quiz
+    cancelReturnToQuiz()
+    // Delay showing modal until pawn animation completes
+    setTimeout(() => {
+      setPonziPrompt(data)
+    }, PAWN_ANIMATION_DELAY)
+  }, [cancelReturnToQuiz])
 
   const handlePolicePrompt = useCallback((data: PolicePromptData) => {
-    setPolicePrompt(data)
-  }, [])
+    hasPendingPromptRef.current = true // Block return to quiz
+    cancelReturnToQuiz()
+    // Delay showing modal until pawn animation completes
+    setTimeout(() => {
+      setPolicePrompt(data)
+    }, PAWN_ANIMATION_DELAY)
+  }, [cancelReturnToQuiz])
 
   // Helper to clear all toasts before showing new ones
   const clearAllToasts = useCallback(() => {
@@ -130,6 +191,7 @@ export default function Home() {
 
   const handleHeistResult = useCallback((result: HeistResultData) => {
     setHeistPrompt(null)
+    hasPendingPromptRef.current = false // Allow return to quiz
     clearAllToasts()
     
     // Trigger flying coins animation
@@ -150,24 +212,36 @@ export default function Home() {
     } else {
       setHeistResult(result)
     }
-  }, [clearAllToasts])
+
+    // Schedule return to quiz after seeing result
+    scheduleReturnToQuiz(3000)
+  }, [clearAllToasts, scheduleReturnToQuiz])
 
   const handlePonziResult = useCallback((result: PonziResultData) => {
     setPonziPrompt(null)
+    hasPendingPromptRef.current = false // Allow return to quiz
     clearAllToasts()
     setPonziResult(result)
-  }, [clearAllToasts])
+    scheduleReturnToQuiz(3000)
+  }, [clearAllToasts, scheduleReturnToQuiz])
 
   const handlePoliceResult = useCallback((result: PoliceResultData) => {
     setPolicePrompt(null)
+    hasPendingPromptRef.current = false // Allow return to quiz
     clearAllToasts()
     setPoliceResult(result)
-  }, [clearAllToasts])
+    scheduleReturnToQuiz(3000)
+  }, [clearAllToasts, scheduleReturnToQuiz])
 
   const handleIdentityTheftEvent = useCallback((result: IdentityTheftResultData) => {
+    hasPendingPromptRef.current = true // Block return to quiz - big modal incoming
+    cancelReturnToQuiz()
     clearAllToasts()
-    setIdentityTheftResult(result)
-  }, [clearAllToasts])
+    // Delay showing modal until pawn animation completes
+    setTimeout(() => {
+      setIdentityTheftResult(result)
+    }, PAWN_ANIMATION_DELAY)
+  }, [clearAllToasts, cancelReturnToQuiz])
 
   const {
     roomState,
@@ -200,7 +274,18 @@ export default function Home() {
 
   const handleDiceRoll = useCallback((value: number | null, isRolling: boolean) => {
     setDiceState({ value, isRolling })
-  }, [])
+    
+    // Switch to board view when dice starts rolling
+    if (isRolling && value !== null) {
+      setActiveView("board")
+      cancelReturnToQuiz()
+    }
+    
+    // When dice is fully hidden, schedule return to quiz
+    if (value === null && !isRolling) {
+      scheduleReturnToQuiz(3000) // Give time to see movement + events
+    }
+  }, [cancelReturnToQuiz, scheduleReturnToQuiz])
 
   const handleAnswer = useCallback(
     async (questionIndex: number, answerIndex: number) => {
@@ -213,18 +298,21 @@ export default function Home() {
     async (wasCorrect: boolean): Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }> => {
       const result = await advanceQuestion(wasCorrect)
 
-      // Handle lap bonus display
+      // Dice sequence 1700ms + pawn start buffer 200ms + pawn animation ~1700ms = ~3600ms
+      const TOTAL_ANIMATION_DELAY = 4000
+
+      // Handle lap bonus display (after pawn animation)
       if (result.lapBonus && wasCorrect) {
         setTimeout(() => {
           clearAllToasts()
           setLapBonus(result.lapBonus)
-        }, 1200)
+        }, TOTAL_ANIMATION_DELAY)
       }
 
       // Check if there's an interactive prompt - if so, skip the EventCard
       const hasInteractivePrompt = result.heistPrompt || result.ponziPrompt || result.policePrompt
 
-      // Handle tile event display (after dice animation) - but NOT for interactive tiles
+      // Handle tile event display (after pawn animation) - but NOT for interactive tiles
       if (result.tileEvent && wasCorrect && !hasInteractivePrompt) {
         setTimeout(() => {
           clearAllToasts()
@@ -234,7 +322,7 @@ export default function Home() {
             coinsDelta: result.tileEvent!.coinsDelta,
             isGlobal: false,
           })
-        }, 1500)
+        }, TOTAL_ANIMATION_DELAY)
       }
 
       return {
@@ -267,6 +355,11 @@ export default function Home() {
     setPonziResult(null)
     setPoliceResult(null)
     setIdentityTheftResult(null)
+  }, [])
+
+  const handleCountdownComplete = useCallback(() => {
+    setShowCountdown(false)
+    setActiveView("quiz")
   }, [])
 
   // Show lobby if game hasn't started
@@ -304,67 +397,106 @@ export default function Home() {
   }
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 overflow-hidden">
       {/* Room code indicator */}
       <div className="absolute top-2 right-2 z-20 bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full">
         <span className="text-xs text-purple-300">Room: </span>
         <span className="text-sm font-mono font-bold text-cyan-400">{roomState.roomCode}</span>
       </div>
 
-      {/* Top section - 65% height: Board + Leaderboard */}
-      <div className="flex gap-3 p-3" style={{ height: "65%" }}>
-        {/* Board - 75% width */}
-        <div className="h-full relative" style={{ width: "75%" }}>
-          <Board players={allPlayers} currentPlayerId={myPlayerId} />
+      {/* View toggle button */}
+      <button
+        onClick={() => setActiveView(activeView === "quiz" ? "board" : "quiz")}
+        className="absolute top-2 left-2 z-20 bg-black/40 hover:bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full transition-colors flex items-center gap-2"
+      >
+        <span className="text-lg">{activeView === "quiz" ? "🎮" : "❓"}</span>
+        <span className="text-xs text-purple-300">
+          {activeView === "quiz" ? "View Board" : "View Quiz"}
+        </span>
+      </button>
 
-          {/* Flying Coins Animation */}
-          {flyingCoins && (
-            <div className="absolute inset-0 rounded-2xl overflow-hidden">
-              <FlyingCoins
-                fromPlayerId={flyingCoins.fromPlayerId}
-                toPlayerId={flyingCoins.toPlayerId}
-                amount={flyingCoins.amount}
-                players={allPlayers}
-                onComplete={() => setFlyingCoins(null)}
-              />
-            </div>
-          )}
+      {/* Board View - Full Screen */}
+      <div
+        className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+          activeView === "board" 
+            ? "opacity-100 pointer-events-auto" 
+            : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="h-full w-full flex gap-3 p-3">
+          {/* Board - 75% width */}
+          <div className="h-full relative" style={{ width: "75%" }}>
+            <Board players={displayPlayers} currentPlayerId={myPlayerId} />
 
-          {/* Dice overlay on board */}
-          {diceState.value !== null && (
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 flex items-center justify-center rounded-2xl">
-              <div className="text-center">
-                <DiceRoller value={diceState.value} isRolling={diceState.isRolling} />
-                {!diceState.isRolling && diceState.value !== null && (
-                  <p className="text-white mt-3 text-lg font-semibold animate-bounce-in">
-                    Moving {diceState.value} {diceState.value === 1 ? "space" : "spaces"}!
-                  </p>
-                )}
+            {/* Flying Coins Animation */}
+            {flyingCoins && (
+              <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                <FlyingCoins
+                  fromPlayerId={flyingCoins.fromPlayerId}
+                  toPlayerId={flyingCoins.toPlayerId}
+                  amount={flyingCoins.amount}
+                  players={displayPlayers}
+                  onComplete={() => setFlyingCoins(null)}
+                />
               </div>
-            </div>
-          )}
-        </div>
+            )}
 
-        {/* Leaderboard - 25% width */}
-        <div className="h-full" style={{ width: "25%" }}>
-          <Leaderboard players={allPlayers} />
+            {/* Dice overlay on board */}
+            {diceState.value !== null && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 flex items-center justify-center rounded-2xl">
+                <div className="text-center">
+                  <DiceRoller value={diceState.value} isRolling={diceState.isRolling} />
+                  {!diceState.isRolling && diceState.value !== null && (
+                    <p className="text-white mt-3 text-lg font-semibold animate-bounce-in">
+                      Moving {diceState.value} {diceState.value === 1 ? "space" : "spaces"}!
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Countdown overlay */}
+            {showCountdown && (
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm z-40 flex items-center justify-center rounded-2xl">
+                <GameCountdown onComplete={handleCountdownComplete} />
+              </div>
+            )}
+          </div>
+
+          {/* Leaderboard - 25% width */}
+          <div className="h-full" style={{ width: "25%" }}>
+            <Leaderboard players={allPlayers} />
+          </div>
         </div>
       </div>
 
-      {/* Bottom section - 35% height: Quiz or Countdown */}
-      <div className="flex-1 p-3 pt-0" style={{ height: "35%" }}>
-        <div className="h-full bg-gradient-to-br from-purple-900/50 to-indigo-900/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-3 overflow-hidden">
-          {showCountdown ? (
-            <GameCountdown onComplete={() => setShowCountdown(false)} />
-          ) : (
-            <QuizScreen
-              player={myPlayer}
-              onAnswer={handleAnswer}
-              onNextQuestion={handleNextQuestion}
-              onDiceRoll={handleDiceRoll}
-              onSessionExpired={handleSessionExpired}
-            />
-          )}
+      {/* Quiz View - Full Screen */}
+      <div
+        className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+          activeView === "quiz" 
+            ? "opacity-100 pointer-events-auto" 
+            : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="h-full w-full flex gap-3 p-3">
+          {/* Quiz Section - 75% width */}
+          <div className="h-full" style={{ width: "75%" }}>
+            <div className="h-full bg-gradient-to-br from-purple-900/50 to-indigo-900/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-6 overflow-hidden">
+              <QuizScreen
+                player={myPlayer}
+                onAnswer={handleAnswer}
+                onNextQuestion={handleNextQuestion}
+                onDiceRoll={handleDiceRoll}
+                onSessionExpired={handleSessionExpired}
+                isActive={activeView === "quiz" && !heistPrompt && !ponziPrompt && !policePrompt && !identityTheftResult && !showCountdown}
+              />
+            </div>
+          </div>
+
+          {/* Leaderboard - 25% width */}
+          <div className="h-full" style={{ width: "25%" }}>
+            <Leaderboard players={allPlayers} />
+          </div>
         </div>
       </div>
 
@@ -389,12 +521,25 @@ export default function Home() {
         <PoliceModal data={policePrompt} onSelectTarget={selectPoliceTarget} />
       )}
 
-      {/* Game Event Toast */}
+      {/* Identity Theft Modal */}
+      {identityTheftResult && (
+        <IdentityTheftModal 
+          data={identityTheftResult} 
+          myPlayerName={myPlayer?.name}
+          onDismiss={() => {
+            setIdentityTheftResult(null)
+            hasPendingPromptRef.current = false
+            scheduleReturnToQuiz(1000)
+          }}
+        />
+      )}
+
+      {/* Game Event Toast - exclude identity theft since it has its own modal */}
       <GameEventToast
         heistResult={heistResult}
         ponziResult={ponziResult}
         policeResult={policeResult}
-        identityTheftResult={identityTheftResult}
+        identityTheftResult={null}
         myPlayerName={myPlayer?.name}
         onDismiss={clearEventToasts}
       />

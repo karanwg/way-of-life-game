@@ -13,15 +13,17 @@ interface QuizScreenProps {
   onNextQuestion: (wasCorrect: boolean) => Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }>
   onDiceRoll?: (dieRoll: number | null, isRolling: boolean) => void
   onSessionExpired?: () => void
+  /** Whether the quiz is currently active (visible and no modals blocking). Timer only runs when true. */
+  isActive?: boolean
 }
 
-export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSessionExpired }: QuizScreenProps) {
+export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSessionExpired, isActive = true }: QuizScreenProps) {
   const [isAnswering, setIsAnswering] = useState(false)
   const [feedback, setFeedback] = useState<{
     correct: boolean
     message: string
   } | null>(null)
-  const [timerActive, setTimerActive] = useState(true)
+  const [timerActive, setTimerActive] = useState(false) // Start paused, activate when isActive
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const feedbackRef = useRef<NodeJS.Timeout | null>(null)
@@ -29,6 +31,15 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
 
   const currentQuestion = QUESTIONS[player.currentQuestionIndex]
   const isQuizComplete = player.currentQuestionIndex >= QUESTIONS.length
+
+  // Activate timer when quiz becomes active (and not showing feedback)
+  useEffect(() => {
+    if (isActive && !feedback && !isLocked) {
+      setTimerActive(true)
+    } else if (!isActive) {
+      setTimerActive(false)
+    }
+  }, [isActive, feedback, isLocked])
 
   const handleTimeExpired = useCallback(() => {
     setTimerActive(false)
