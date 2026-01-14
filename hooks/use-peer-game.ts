@@ -32,6 +32,15 @@ function roomCodeToPeerId(code: string): string {
   return `wayoflife-${code.toUpperCase()}`
 }
 
+// PeerJS server configuration
+const peerConfig = {
+  host: 'peer-server-wg.up.railway.app',
+  port: 443,
+  path: '/',
+  key: 'peerjs',
+  secure: true,
+}
+
 export interface MoveResultForUI {
   dieRoll: number | null
   dieRolls?: number[] // Individual rolls for "roll again on 6"
@@ -439,7 +448,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
 
       gameEngineRef.current = new P2PGameEngine()
 
-      const peer = new Peer(peerId)
+      const peer = new Peer(peerId, peerConfig)
       peerRef.current = peer
 
       peer.on("open", () => {
@@ -482,7 +491,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
       const peerId = roomCodeToPeerId(roomCode)
       setRoomState((prev) => ({ ...prev, roomCode: roomCode.toUpperCase(), role: "guest", connectionState: "connecting" }))
 
-      const peer = new Peer()
+      const peer = new Peer(peerConfig)
       peerRef.current = peer
 
       peer.on("open", () => {
