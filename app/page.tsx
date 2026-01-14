@@ -32,6 +32,7 @@ export default function Home() {
   
   const [eventCard, setEventCard] = useState<EventCardData | null>(null)
   const [lapBonus, setLapBonus] = useState<LapBonusData | null>(null)
+  const [impactToast, setImpactToast] = useState<{ message: string; coinsDelta: number } | null>(null)
   const [diceState, setDiceState] = useState<{ value: number | null; rolls: number[]; isRolling: boolean }>({
     value: null,
     rolls: [],
@@ -248,19 +249,32 @@ export default function Home() {
     }, PAWN_ANIMATION_DELAY)
   }, [clearAllToasts, cancelReturnToQuiz])
 
-  const handleGlobalEvent = useCallback((event: { tileName: string; tileText: string; coinsDelta: number; isGlobal?: boolean; affectedPlayerName?: string }) => {
-    // Show global events (from other players) as an event card
-    clearAllToasts()
-    // Delay to let pawn animation complete
-    setTimeout(() => {
-      setEventCard({
-        tileName: event.tileName,
-        tileText: event.tileText,
-        coinsDelta: event.coinsDelta,
-        isGlobal: true,
-        affectedPlayerName: event.affectedPlayerName,
-      })
-    }, PAWN_ANIMATION_DELAY)
+  const handleImpactedByEvent = useCallback((event: { tileName: string; tileText: string; coinsDelta: number; isBigEvent: boolean; triggeredByName: string }) => {
+    // I was impacted by someone else's event
+    if (event.isBigEvent) {
+      // Big events (like swap_meet) show a big modal
+      clearAllToasts()
+      setTimeout(() => {
+        setEventCard({
+          tileName: event.tileName,
+          tileText: `${event.triggeredByName} swapped coins with you!`,
+          coinsDelta: event.coinsDelta,
+          isGlobal: true,
+          affectedPlayerName: event.triggeredByName,
+        })
+      }, PAWN_ANIMATION_DELAY)
+    } else {
+      // Small events show a small toast at the bottom
+      setTimeout(() => {
+        const coinText = event.coinsDelta !== 0 
+          ? ` ${event.coinsDelta >= 0 ? '+' : ''}${event.coinsDelta} 🪙` 
+          : ''
+        setImpactToast({
+          message: `${event.triggeredByName}: ${event.tileName}${coinText}`,
+          coinsDelta: event.coinsDelta,
+        })
+      }, PAWN_ANIMATION_DELAY)
+    }
   }, [clearAllToasts])
 
   const {
@@ -290,7 +304,7 @@ export default function Home() {
     onPonziResult: handlePonziResult,
     onPoliceResult: handlePoliceResult,
     onIdentityTheftEvent: handleIdentityTheftEvent,
-    onGlobalEvent: handleGlobalEvent,
+    onImpactedByEvent: handleImpactedByEvent,
   })
 
   const handleDiceRoll = useCallback((value: number | null, isRolling: boolean, rolls?: number[]) => {
@@ -592,6 +606,38 @@ export default function Home() {
         myPlayerName={myPlayer?.name}
         onDismiss={clearEventToasts}
       />
+
+      {/* Impact Toast - small notification when impacted by someone else's event */}
+      {impactToast && (
+        <ImpactToast 
+          message={impactToast.message} 
+          coinsDelta={impactToast.coinsDelta}
+          onDismiss={() => setImpactToast(null)} 
+        />
+      )}
+    </div>
+  )
+}
+
+// Small toast for when you're impacted by someone else's global event
+function ImpactToast({ message, coinsDelta, onDismiss }: { message: string; coinsDelta: number; onDismiss: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onDismiss()
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [onDismiss])
+
+  return (
+    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 animate-bounce-in">
+      <div className={`
+        px-4 py-2 rounded-xl shadow-lg backdrop-blur-sm text-sm font-medium
+        ${coinsDelta >= 0 
+          ? "bg-green-100/95 border-2 border-green-400 text-green-800" 
+          : "bg-red-100/95 border-2 border-red-400 text-red-800"}
+      `}>
+        {message}
+      </div>
     </div>
   )
 }

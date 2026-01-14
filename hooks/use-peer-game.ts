@@ -55,7 +55,7 @@ interface UsePeerGameOptions {
   onPolicePrompt?: (data: PolicePromptData) => void
   onPoliceResult?: (result: PoliceResultData) => void
   onIdentityTheftEvent?: (result: IdentityTheftResultData) => void
-  onGlobalEvent?: (event: TileEventData & { affectedPlayerName?: string }) => void
+  onImpactedByEvent?: (event: { tileName: string; tileText: string; coinsDelta: number; isBigEvent: boolean; triggeredByName: string }) => void
   onGameReset?: () => void
   onError?: (error: string) => void
   onHostDisconnected?: () => void
@@ -188,12 +188,19 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
               broadcastToGuests({ type: "IDENTITY_THEFT_EVENT", result: result.identityTheftEvent, allPlayers: engine.getAllPlayers() })
             }
 
-            // If this is a GUEST's move with a global event, show it to the HOST too
-            if (message.playerId !== myPlayerIdRef.current && result.tileEvent?.isGlobal && !hasInteractivePrompt) {
-              opts.onGlobalEvent?.({
-                ...result.tileEvent,
-                affectedPlayerName: allPlayers.find(p => p.id === message.playerId)?.name,
-              })
+            // If this is a GUEST's move with a global event, check if HOST is impacted
+            if (message.playerId !== myPlayerIdRef.current && result.tileEvent?.isGlobal && result.tileEvent.impactedPlayers && !hasInteractivePrompt) {
+              const myImpact = result.tileEvent.impactedPlayers.find(p => p.id === myPlayerIdRef.current)
+              if (myImpact) {
+                const triggerPlayer = allPlayers.find(p => p.id === message.playerId)
+                opts.onImpactedByEvent?.({
+                  tileName: result.tileEvent.tileName,
+                  tileText: result.tileEvent.tileText,
+                  coinsDelta: myImpact.coinsDelta,
+                  isBigEvent: myImpact.isBigEvent || false,
+                  triggeredByName: triggerPlayer?.name || "Someone",
+                })
+              }
             }
 
             setRoomState((prev) => ({ ...prev, players: allPlayers }))
@@ -346,13 +353,20 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
               pendingMoveResolverRef.current(moveResult)
               pendingMoveResolverRef.current = null
             }
-          } else if (message.tileEvent?.isGlobal) {
-            // This is someone else's move, but it's a GLOBAL event that affects everyone
-            // Show the event to this player too
-            opts.onGlobalEvent?.({
-              ...message.tileEvent,
-              affectedPlayerName: message.allPlayers.find(p => p.id === message.playerId)?.name,
-            })
+          } else if (message.tileEvent?.isGlobal && message.tileEvent.impactedPlayers) {
+            // Check if current player is impacted by this event
+            const myImpact = message.tileEvent.impactedPlayers.find(p => p.id === myPlayerIdRef.current)
+            if (myImpact) {
+              const triggerPlayer = message.allPlayers.find(p => p.id === message.playerId)
+              opts.onImpactedByEvent?.({
+                tileName: message.tileEvent.tileName,
+                tileText: message.tileEvent.tileText,
+                coinsDelta: myImpact.coinsDelta,
+                isBigEvent: myImpact.isBigEvent || false,
+                triggeredByName: triggerPlayer?.name || "Someone",
+              })
+            }
+            // Non-impacted players see nothing
           }
           updateMyPlayer(message.allPlayers)
           break

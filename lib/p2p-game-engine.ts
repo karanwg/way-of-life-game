@@ -261,11 +261,15 @@ export class P2PGameEngine {
             const stealAmount = Math.min(150, richest.coins)
             richest.coins -= stealAmount
             poorest.coins += stealAmount
+            const impacted: { id: string; name: string; coinsDelta: number }[] = []
+            if (richest.id !== playerId) impacted.push({ id: richest.id, name: richest.name, coinsDelta: -stealAmount })
+            if (poorest.id !== playerId && poorest.id !== richest.id) impacted.push({ id: poorest.id, name: poorest.name, coinsDelta: stealAmount })
             result.tileEvent = {
               tileName: tile.name,
               tileText: `🦸 Stole ${stealAmount} from ${richest.name}, gave to ${poorest.name}!`,
               coinsDelta: 0,
               isGlobal: true,
+              impactedPlayers: impacted,
             }
           } else {
             result.tileEvent = { tileName: tile.name, tileText: "No one to help!", coinsDelta: 0 }
@@ -277,10 +281,12 @@ export class P2PGameEngine {
           // Take 25 coins from every other player
           const victims = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
           let totalCollected = 0
+          const impacted: { id: string; name: string; coinsDelta: number }[] = []
           victims.forEach(v => {
             const take = Math.min(25, v.coins)
             v.coins -= take
             totalCollected += take
+            if (take > 0) impacted.push({ id: v.id, name: v.name, coinsDelta: -take })
           })
           player.coins += totalCollected
           result.tileEvent = {
@@ -288,6 +294,7 @@ export class P2PGameEngine {
             tileText: `💸 Collected ${totalCollected} coins from ${victims.length} players!`,
             coinsDelta: totalCollected,
             isGlobal: true,
+            impactedPlayers: impacted,
           }
           break
         }
@@ -295,18 +302,23 @@ export class P2PGameEngine {
         case "party_time": {
           // Everyone gets 50 coins!
           const allPlayers = Array.from(this.state.players.values())
-          allPlayers.forEach(p => { p.coins += 50 })
+          const impacted: { id: string; name: string; coinsDelta: number }[] = []
+          allPlayers.forEach(p => { 
+            p.coins += 50
+            if (p.id !== playerId) impacted.push({ id: p.id, name: p.name, coinsDelta: 50 })
+          })
           result.tileEvent = {
             tileName: tile.name,
             tileText: `🎉 PARTY! Everyone got 50 coins!`,
             coinsDelta: 50,
             isGlobal: true,
+            impactedPlayers: impacted,
           }
           break
         }
 
         case "swap_meet": {
-          // Swap coins with random player
+          // Swap coins with random player - BIG EVENT for victim
           const swapTargets = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
           if (swapTargets.length > 0) {
             const target = swapTargets[Math.floor(Math.random() * swapTargets.length)]
@@ -315,11 +327,18 @@ export class P2PGameEngine {
             player.coins = theirCoins
             target.coins = myCoins
             const diff = theirCoins - myCoins
+            const victimDiff = myCoins - theirCoins
             result.tileEvent = {
               tileName: tile.name,
               tileText: `🔄 Swapped coins with ${target.name}! ${diff >= 0 ? '+' : ''}${diff} for you!`,
               coinsDelta: diff,
               isGlobal: true,
+              impactedPlayers: [{
+                id: target.id,
+                name: target.name,
+                coinsDelta: victimDiff,
+                isBigEvent: true, // Victim sees big modal for this!
+              }],
             }
           } else {
             result.tileEvent = { tileName: tile.name, tileText: "No one to swap with!", coinsDelta: 0 }
@@ -332,13 +351,13 @@ export class P2PGameEngine {
           const slipTargets = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
           if (slipTargets.length > 0) {
             const victim = slipTargets[Math.floor(Math.random() * slipTargets.length)]
-            // Move back 3 spaces (handle wrap-around)
             victim.currentTileId = ((victim.currentTileId - 3) % 24 + 24) % 24
             result.tileEvent = {
               tileName: tile.name,
               tileText: `🍌 ${victim.name} slipped and fell back 3 spaces!`,
               coinsDelta: 0,
               isGlobal: true,
+              impactedPlayers: [{ id: victim.id, name: victim.name, coinsDelta: 0 }],
             }
           } else {
             result.tileEvent = { tileName: tile.name, tileText: "No one to prank!", coinsDelta: 0 }
@@ -350,10 +369,12 @@ export class P2PGameEngine {
           // Steal 20 coins from each player
           const magnetVictims = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
           let totalStolen = 0
+          const impacted: { id: string; name: string; coinsDelta: number }[] = []
           magnetVictims.forEach(v => {
             const take = Math.min(20, v.coins)
             v.coins -= take
             totalStolen += take
+            if (take > 0) impacted.push({ id: v.id, name: v.name, coinsDelta: -take })
           })
           player.coins += totalStolen
           result.tileEvent = {
@@ -361,6 +382,7 @@ export class P2PGameEngine {
             tileText: `🧲 Attracted ${totalStolen} coins from everyone!`,
             coinsDelta: totalStolen,
             isGlobal: true,
+            impactedPlayers: impacted,
           }
           break
         }
@@ -369,16 +391,19 @@ export class P2PGameEngine {
           // Everyone else loses 50 coins
           const bombVictims = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
           let totalLost = 0
+          const impacted: { id: string; name: string; coinsDelta: number }[] = []
           bombVictims.forEach(v => {
             const lose = Math.min(50, v.coins)
             v.coins -= lose
             totalLost += lose
+            if (lose > 0) impacted.push({ id: v.id, name: v.name, coinsDelta: -lose })
           })
           result.tileEvent = {
             tileName: tile.name,
             tileText: `💣 BOOM! Others lost ${totalLost} coins total!`,
             coinsDelta: 0,
             isGlobal: true,
+            impactedPlayers: impacted,
           }
           break
         }

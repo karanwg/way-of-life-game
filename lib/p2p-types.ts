@@ -20,6 +20,13 @@ export interface TileEventData {
   tileText: string
   coinsDelta: number
   isGlobal?: boolean // If true, this event affects multiple players
+  // Track who was impacted (for targeted notifications)
+  impactedPlayers?: {
+    id: string
+    name: string
+    coinsDelta: number
+    isBigEvent?: boolean // e.g., swap_meet victim sees big modal
+  }[]
 }
 
 // Heist prompt data - now includes heist type
