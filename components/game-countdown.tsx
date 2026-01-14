@@ -14,7 +14,6 @@ export function GameCountdown({ onComplete }: GameCountdownProps) {
   const [isExiting, setIsExiting] = useState(false)
   const audioContextRef = useRef<AudioContext | null>(null)
 
-  // Create beep sounds using Web Audio API
   const playBeep = (frequency: number, duration: number, type: "short" | "long" = "short") => {
     try {
       if (!audioContextRef.current) {
@@ -26,11 +25,9 @@ export function GameCountdown({ onComplete }: GameCountdownProps) {
 
       oscillator.connect(gainNode)
       gainNode.connect(ctx.destination)
-
       oscillator.frequency.value = frequency
       oscillator.type = "sine"
 
-      // Envelope for the sound
       const now = ctx.currentTime
       gainNode.gain.setValueAtTime(0, now)
       gainNode.gain.linearRampToValueAtTime(0.3, now + 0.02)
@@ -45,140 +42,110 @@ export function GameCountdown({ onComplete }: GameCountdownProps) {
       oscillator.start(now)
       oscillator.stop(now + duration)
     } catch (e) {
-      // Audio not supported, continue silently
       console.log("Audio not available")
     }
   }
 
   useEffect(() => {
-    // Extended 10-second sequence:
-    // 0ms - Show overlay with instructions
-    // 4000ms - RED light + beep
-    // 6500ms - YELLOW light + beep  
-    // 8500ms - GREEN light + GO! + long beep
-    // 10000ms - Exit
-
     const timers: NodeJS.Timeout[] = []
 
-    timers.push(setTimeout(() => {
-      setCurrentLight("red")
-      playBeep(440, 0.3) // A4 note
-    }, 4000))
-
-    timers.push(setTimeout(() => {
-      setCurrentLight("yellow")
-      playBeep(440, 0.3)
-    }, 6500))
-
-    timers.push(setTimeout(() => {
-      setCurrentLight("green")
-      setShowGo(true)
-      playBeep(880, 0.6, "long") // A5 note, longer
-    }, 8500))
-
-    timers.push(setTimeout(() => {
-      setIsExiting(true)
-    }, 9700))
-
-    timers.push(setTimeout(() => {
-      onComplete()
-    }, 10000))
+    // 5 second countdown: Ready (1.5s) -> Set (2.8s) -> Go (4s) -> Complete (5s)
+    timers.push(setTimeout(() => { setCurrentLight("red"); playBeep(440, 0.3) }, 1500))
+    timers.push(setTimeout(() => { setCurrentLight("yellow"); playBeep(440, 0.3) }, 2800))
+    timers.push(setTimeout(() => { setCurrentLight("green"); setShowGo(true); playBeep(880, 0.6, "long") }, 4000))
+    timers.push(setTimeout(() => { setIsExiting(true) }, 4700))
+    timers.push(setTimeout(() => { onComplete() }, 5000))
 
     return () => {
       timers.forEach(clearTimeout)
-      if (audioContextRef.current) {
-        audioContextRef.current.close()
-      }
+      if (audioContextRef.current) audioContextRef.current.close()
     }
   }, [onComplete])
 
   return (
     <div
       className={`
-        h-full w-full flex flex-col items-center justify-center gap-4
+        w-full max-w-xl mx-4
+        bg-[#FAF8F0] rounded-2xl border-4 border-amber-700/80 shadow-2xl overflow-hidden
         transition-opacity duration-300
         ${isExiting ? "opacity-0" : "opacity-100"}
       `}
     >
-      {/* Top row: Traffic Light + Status */}
-      <div className="flex items-center gap-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 text-center">
+        <div className="text-4xl mb-1">🎲</div>
+        <h1 className="text-2xl font-black text-white">Way of Life</h1>
+      </div>
+
+      <div className="p-6">
         {/* Traffic Light */}
-        <div className="bg-gray-800 rounded-xl p-3 shadow-xl border-2 border-gray-700">
-          <div className="flex gap-3">
-            {/* Red Light */}
-            <div
-              className={`
-                w-12 h-12 rounded-full border-2 transition-all duration-200
-                ${currentLight === "red"
-                  ? "bg-red-500 border-red-400 shadow-[0_0_25px_6px_rgba(239,68,68,0.5)]"
-                  : "bg-red-950 border-red-900"
-                }
-              `}
-            />
+        <div className="flex items-center justify-center gap-6 mb-6">
+          <div className="bg-gray-800 rounded-2xl p-4 shadow-lg">
+            <div className="flex gap-3">
+              <div
+                className={`
+                  w-12 h-12 rounded-full transition-all duration-200 border-2 border-gray-700
+                  ${currentLight === "red"
+                    ? "bg-red-500 shadow-[0_0_20px_5px_rgba(239,68,68,0.5)]"
+                    : "bg-red-900/40"
+                  }
+                `}
+              />
+              <div
+                className={`
+                  w-12 h-12 rounded-full transition-all duration-200 border-2 border-gray-700
+                  ${currentLight === "yellow"
+                    ? "bg-yellow-400 shadow-[0_0_20px_5px_rgba(250,204,21,0.5)]"
+                    : "bg-yellow-900/40"
+                  }
+                `}
+              />
+              <div
+                className={`
+                  w-12 h-12 rounded-full transition-all duration-200 border-2 border-gray-700
+                  ${currentLight === "green"
+                    ? "bg-green-500 shadow-[0_0_20px_5px_rgba(34,197,94,0.5)]"
+                    : "bg-green-900/40"
+                  }
+                `}
+              />
+            </div>
+          </div>
 
-            {/* Yellow Light */}
-            <div
-              className={`
-                w-12 h-12 rounded-full border-2 transition-all duration-200
-                ${currentLight === "yellow"
-                  ? "bg-yellow-400 border-yellow-300 shadow-[0_0_25px_6px_rgba(250,204,21,0.5)]"
-                  : "bg-yellow-950 border-yellow-900"
-                }
-              `}
-            />
-
-            {/* Green Light */}
-            <div
-              className={`
-                w-12 h-12 rounded-full border-2 transition-all duration-200
-                ${currentLight === "green"
-                  ? "bg-green-500 border-green-400 shadow-[0_0_25px_6px_rgba(34,197,94,0.5)]"
-                  : "bg-green-950 border-green-900"
-                }
-              `}
-            />
+          <div className="min-w-[100px]">
+            {currentLight === "off" && (
+              <p className="text-lg text-amber-700 font-semibold animate-pulse">Get Ready...</p>
+            )}
+            {currentLight === "red" && (
+              <p className="text-2xl text-red-600 font-black">READY</p>
+            )}
+            {currentLight === "yellow" && (
+              <p className="text-2xl text-amber-600 font-black">SET</p>
+            )}
+            {showGo && (
+              <p className="text-3xl text-green-600 font-black">GO! 🚀</p>
+            )}
           </div>
         </div>
 
-        {/* Status Text */}
-        <div className="min-w-[140px]">
-          {currentLight === "off" && (
-            <p className="text-xl text-white font-bold animate-pulse">Get Ready...</p>
-          )}
-          {currentLight === "red" && (
-            <p className="text-3xl text-red-400 font-black animate-bounce-in">READY</p>
-          )}
-          {currentLight === "yellow" && (
-            <p className="text-3xl text-yellow-400 font-black animate-bounce-in">SET</p>
-          )}
-          {showGo && (
-            <p className="text-4xl text-green-400 font-black animate-bounce-in drop-shadow-[0_0_15px_rgba(34,197,94,0.7)]">
-              GO! 🚀
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Instructions Grid */}
-      <div className="flex gap-4 text-sm max-w-3xl">
-        <div className="flex-1 bg-black/20 rounded-lg p-3 border border-purple-500/20">
-          <p className="text-purple-300 font-semibold mb-1">🎯 Goal</p>
-          <p className="text-gray-300">Answer quiz questions to earn coins. Most coins at the end wins!</p>
-        </div>
-        
-        <div className="flex-1 bg-black/20 rounded-lg p-3 border border-purple-500/20">
-          <p className="text-green-300 font-semibold mb-1">✅ Correct Answer</p>
-          <p className="text-gray-300">+100 coins, roll d4 dice, move on board, trigger tile effects</p>
-        </div>
-        
-        <div className="flex-1 bg-black/20 rounded-lg p-3 border border-purple-500/20">
-          <p className="text-red-300 font-semibold mb-1">❌ Wrong Answer</p>
-          <p className="text-gray-300">-50 coins, no movement. Watch out for debt!</p>
-        </div>
-        
-        <div className="flex-1 bg-black/20 rounded-lg p-3 border border-purple-500/20">
-          <p className="text-yellow-300 font-semibold mb-1">🏠 Lap Bonus</p>
-          <p className="text-gray-300">Pass Home tile = +300 coins. Land on Home = +100 bonus!</p>
+        {/* Quick rules */}
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="bg-white rounded-xl p-3 border-2 border-amber-100">
+            <p className="text-gray-800 font-bold mb-1">🎯 Goal</p>
+            <p className="text-gray-600 text-xs">Answer questions, collect coins!</p>
+          </div>
+          <div className="bg-white rounded-xl p-3 border-2 border-amber-100">
+            <p className="text-gray-800 font-bold mb-1">✅ Correct</p>
+            <p className="text-gray-600 text-xs">+100 coins, roll dice, move!</p>
+          </div>
+          <div className="bg-white rounded-xl p-3 border-2 border-amber-100">
+            <p className="text-gray-800 font-bold mb-1">❌ Wrong</p>
+            <p className="text-gray-600 text-xs">-50 coins, no movement</p>
+          </div>
+          <div className="bg-white rounded-xl p-3 border-2 border-amber-100">
+            <p className="text-gray-800 font-bold mb-1">🏠 Lap Bonus</p>
+            <p className="text-gray-600 text-xs">Pass GO = +200 coins!</p>
+          </div>
         </div>
       </div>
     </div>

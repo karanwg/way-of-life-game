@@ -20,6 +20,7 @@ import { usePeerGame, type MoveResultForUI } from "@/hooks/use-peer-game"
 import type { Player } from "@/lib/types"
 import type { HeistPromptData, PonziPromptData, PolicePromptData, HeistResultData, PonziResultData, PoliceResultData, IdentityTheftResultData } from "@/lib/p2p-types"
 import { QUESTIONS } from "@/lib/questions"
+import { toggleBGM, isBGMPlaying } from "@/lib/bgm"
 
 type ActiveView = "quiz" | "board"
 
@@ -31,13 +32,17 @@ export default function Home() {
   
   const [eventCard, setEventCard] = useState<EventCardData | null>(null)
   const [lapBonus, setLapBonus] = useState<LapBonusData | null>(null)
-  const [diceState, setDiceState] = useState<{ value: number | null; isRolling: boolean }>({
+  const [diceState, setDiceState] = useState<{ value: number | null; rolls: number[]; isRolling: boolean }>({
     value: null,
+    rolls: [],
     isRolling: false,
   })
   
   // View state - quiz or board
   const [activeView, setActiveView] = useState<ActiveView>("quiz")
+  
+  // BGM state
+  const [bgmPlaying, setBgmPlaying] = useState(false)
 
   // Interactive prompts
   const [heistPrompt, setHeistPrompt] = useState<HeistPromptData | null>(null)
@@ -114,7 +119,7 @@ export default function Home() {
   const handleGameStarted = useCallback(() => {
     setEventCard(null)
     setLapBonus(null)
-    setDiceState({ value: null, isRolling: false })
+    setDiceState({ value: null, rolls: [], isRolling: false })
     setHeistPrompt(null)
     setPonziPrompt(null)
     setPolicePrompt(null)
@@ -133,7 +138,7 @@ export default function Home() {
     setDisplayPlayers([])
     setEventCard(null)
     setLapBonus(null)
-    setDiceState({ value: null, isRolling: false })
+    setDiceState({ value: null, rolls: [], isRolling: false })
     // Clear all prompts
     setHeistPrompt(null)
     setPonziPrompt(null)
@@ -243,6 +248,21 @@ export default function Home() {
     }, PAWN_ANIMATION_DELAY)
   }, [clearAllToasts, cancelReturnToQuiz])
 
+  const handleGlobalEvent = useCallback((event: { tileName: string; tileText: string; coinsDelta: number; isGlobal?: boolean; affectedPlayerName?: string }) => {
+    // Show global events (from other players) as an event card
+    clearAllToasts()
+    // Delay to let pawn animation complete
+    setTimeout(() => {
+      setEventCard({
+        tileName: event.tileName,
+        tileText: event.tileText,
+        coinsDelta: event.coinsDelta,
+        isGlobal: true,
+        affectedPlayerName: event.affectedPlayerName,
+      })
+    }, PAWN_ANIMATION_DELAY)
+  }, [clearAllToasts])
+
   const {
     roomState,
     myPlayerId,
@@ -270,10 +290,11 @@ export default function Home() {
     onPonziResult: handlePonziResult,
     onPoliceResult: handlePoliceResult,
     onIdentityTheftEvent: handleIdentityTheftEvent,
+    onGlobalEvent: handleGlobalEvent,
   })
 
-  const handleDiceRoll = useCallback((value: number | null, isRolling: boolean) => {
-    setDiceState({ value, isRolling })
+  const handleDiceRoll = useCallback((value: number | null, isRolling: boolean, rolls?: number[]) => {
+    setDiceState({ value, rolls: rolls || [], isRolling })
     
     // Switch to board view when dice starts rolling
     if (isRolling && value !== null) {
@@ -387,30 +408,58 @@ export default function Home() {
   // Make sure we have a player
   if (!myPlayer || !myPlayerId) {
     return (
-      <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center">
+      <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-purple-300 text-lg">Loading...</p>
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-emerald-700 text-lg font-medium">Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 overflow-hidden">
-      {/* Room code indicator */}
-      <div className="absolute top-2 right-2 z-20 bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full">
-        <span className="text-xs text-purple-300">Room: </span>
-        <span className="text-sm font-mono font-bold text-cyan-400">{roomState.roomCode}</span>
+    <div className="fixed inset-0 w-screen h-screen bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-200 overflow-hidden">
+      {/* Subtle cloud shapes */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+        <div className="absolute top-20 left-10 w-64 h-32 bg-white rounded-full blur-3xl" />
+        <div className="absolute top-40 right-20 w-48 h-24 bg-white rounded-full blur-3xl" />
       </div>
 
-      {/* View toggle button */}
+      {/* Room code indicator */}
+      <div className="absolute top-1 right-1 z-20 bg-[#FAF8F0] px-3 py-1.5 rounded-lg shadow-lg border-2 border-amber-300">
+        <span className="text-xs text-amber-700 font-medium">Room: </span>
+        <span className="text-sm font-mono font-bold text-green-700">{roomState.roomCode}</span>
+      </div>
+
+      {/* BGM toggle */}
+      <button
+        onClick={() => {
+          const nowPlaying = toggleBGM()
+          setBgmPlaying(nowPlaying)
+        }}
+        className={`
+          absolute bottom-3 left-3 z-20 
+          px-3 py-2 rounded-xl shadow-lg border-2 
+          transition-all hover:scale-105 flex items-center gap-2
+          ${bgmPlaying 
+            ? "bg-green-100 border-green-400 hover:bg-green-50" 
+            : "bg-[#FAF8F0] border-amber-300 hover:bg-white"}
+        `}
+        title={bgmPlaying ? "Mute music" : "Play music"}
+      >
+        <span className="text-lg">{bgmPlaying ? "🎵" : "🔇"}</span>
+        <span className={`font-semibold text-xs ${bgmPlaying ? "text-green-700" : "text-amber-800"}`}>
+          {bgmPlaying ? "On" : "Off"}
+        </span>
+      </button>
+
+      {/* View toggle button - centered in board panel (75% width panel, so center at ~37.5%) */}
       <button
         onClick={() => setActiveView(activeView === "quiz" ? "board" : "quiz")}
-        className="absolute top-2 left-2 z-20 bg-black/40 hover:bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full transition-colors flex items-center gap-2"
+        className="absolute top-5 left-[37.5%] -translate-x-1/2 z-20 bg-[#FAF8F0] hover:bg-white px-5 py-2 rounded-xl transition-all flex items-center gap-2 shadow-lg border-2 border-amber-300"
       >
         <span className="text-lg">{activeView === "quiz" ? "🎮" : "❓"}</span>
-        <span className="text-xs text-purple-300">
+        <span className="text-sm text-amber-800 font-semibold">
           {activeView === "quiz" ? "View Board" : "View Quiz"}
         </span>
       </button>
@@ -425,7 +474,7 @@ export default function Home() {
       >
         <div className="h-full w-full flex gap-3 p-3">
           {/* Board - 75% width */}
-          <div className="h-full relative" style={{ width: "75%" }}>
+          <div className="h-full relative rounded-2xl overflow-hidden" style={{ width: "75%" }}>
             <Board players={displayPlayers} currentPlayerId={myPlayerId} />
 
             {/* Flying Coins Animation */}
@@ -443,11 +492,11 @@ export default function Home() {
 
             {/* Dice overlay on board */}
             {diceState.value !== null && (
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 flex items-center justify-center rounded-2xl">
-                <div className="text-center">
+              <div className="absolute inset-0 bg-green-900/70 backdrop-blur-sm z-30 flex items-center justify-center rounded-2xl">
+                <div className="text-center bg-[#FAF8F0] rounded-2xl p-8 shadow-2xl border-4 border-amber-700/80">
                   <DiceRoller value={diceState.value} isRolling={diceState.isRolling} />
                   {!diceState.isRolling && diceState.value !== null && (
-                    <p className="text-white mt-3 text-lg font-semibold animate-bounce-in">
+                    <p className="text-green-700 mt-4 text-lg font-bold animate-bounce-in">
                       Moving {diceState.value} {diceState.value === 1 ? "space" : "spaces"}!
                     </p>
                   )}
@@ -457,7 +506,7 @@ export default function Home() {
 
             {/* Countdown overlay */}
             {showCountdown && (
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm z-40 flex items-center justify-center rounded-2xl">
+              <div className="absolute inset-0 bg-green-900/70 backdrop-blur-sm z-40 flex items-center justify-center rounded-2xl">
                 <GameCountdown onComplete={handleCountdownComplete} />
               </div>
             )}
@@ -481,7 +530,7 @@ export default function Home() {
         <div className="h-full w-full flex gap-3 p-3">
           {/* Quiz Section - 75% width */}
           <div className="h-full" style={{ width: "75%" }}>
-            <div className="h-full bg-gradient-to-br from-purple-900/50 to-indigo-900/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-6 overflow-hidden">
+            <div className="h-full bg-[#FAF8F0] border-4 border-amber-700/80 rounded-2xl p-6 overflow-hidden shadow-xl">
               <QuizScreen
                 player={myPlayer}
                 onAnswer={handleAnswer}

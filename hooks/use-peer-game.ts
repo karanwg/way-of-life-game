@@ -34,6 +34,7 @@ function roomCodeToPeerId(code: string): string {
 
 export interface MoveResultForUI {
   dieRoll: number | null
+  dieRolls?: number[] // Individual rolls for "roll again on 6"
   lapBonus: { lapsCompleted: number; coinsAwarded: number } | null
   tileEvent: TileEventData | null
   heistPrompt?: HeistPromptData
@@ -54,6 +55,7 @@ interface UsePeerGameOptions {
   onPolicePrompt?: (data: PolicePromptData) => void
   onPoliceResult?: (result: PoliceResultData) => void
   onIdentityTheftEvent?: (result: IdentityTheftResultData) => void
+  onGlobalEvent?: (event: TileEventData & { affectedPlayerName?: string }) => void
   onGameReset?: () => void
   onError?: (error: string) => void
   onHostDisconnected?: () => void
@@ -167,6 +169,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
               type: "MOVE_RESULT",
               playerId: message.playerId,
               dieRoll: result.dieRoll,
+              dieRolls: result.dieRolls,
               lapBonus: result.lapBonus,
               tileEvent: hasInteractivePrompt ? null : result.tileEvent,
               allPlayers,
@@ -183,6 +186,14 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
             }
             if (result.identityTheftEvent) {
               broadcastToGuests({ type: "IDENTITY_THEFT_EVENT", result: result.identityTheftEvent, allPlayers: engine.getAllPlayers() })
+            }
+
+            // If this is a GUEST's move with a global event, show it to the HOST too
+            if (message.playerId !== myPlayerIdRef.current && result.tileEvent?.isGlobal && !hasInteractivePrompt) {
+              opts.onGlobalEvent?.({
+                ...result.tileEvent,
+                affectedPlayerName: allPlayers.find(p => p.id === message.playerId)?.name,
+              })
             }
 
             setRoomState((prev) => ({ ...prev, players: allPlayers }))
@@ -323,8 +334,10 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           setRoomState((prev) => ({ ...prev, players: message.allPlayers }))
           opts.onPlayersUpdate?.(message.allPlayers)
           if (message.playerId === myPlayerIdRef.current) {
+            // This is MY move result
             const moveResult: MoveResultForUI = {
               dieRoll: message.dieRoll,
+              dieRolls: message.dieRolls,
               lapBonus: message.lapBonus,
               tileEvent: message.tileEvent,
             }
@@ -333,6 +346,13 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
               pendingMoveResolverRef.current(moveResult)
               pendingMoveResolverRef.current = null
             }
+          } else if (message.tileEvent?.isGlobal) {
+            // This is someone else's move, but it's a GLOBAL event that affects everyone
+            // Show the event to this player too
+            opts.onGlobalEvent?.({
+              ...message.tileEvent,
+              affectedPlayerName: message.allPlayers.find(p => p.id === message.playerId)?.name,
+            })
           }
           updateMyPlayer(message.allPlayers)
           break
@@ -523,7 +543,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
             const allPlayers = gameEngineRef.current.getAllPlayers()
             // Don't include tileEvent if there's an interactive prompt (to avoid double modals)
             const hasInteractivePrompt = result.heistPrompt || result.ponziPrompt || result.policePrompt
-            broadcastToGuests({ type: "MOVE_RESULT", playerId: myPlayerId, dieRoll: result.dieRoll, lapBonus: result.lapBonus, tileEvent: hasInteractivePrompt ? null : result.tileEvent, allPlayers })
+            broadcastToGuests({ type: "MOVE_RESULT", playerId: myPlayerId, dieRoll: result.dieRoll, dieRolls: result.dieRolls, lapBonus: result.lapBonus, tileEvent: hasInteractivePrompt ? null : result.tileEvent, allPlayers })
 
             if (result.heistPrompt) options.onHeistPrompt?.(result.heistPrompt)
             if (result.ponziPrompt) options.onPonziPrompt?.(result.ponziPrompt)

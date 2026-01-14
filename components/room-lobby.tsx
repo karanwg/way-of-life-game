@@ -2,10 +2,10 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Player } from "@/lib/types"
 import type { RoomState } from "@/lib/p2p-types"
+import { toggleBGM, isBGMPlaying } from "@/lib/bgm"
 
 interface RoomLobbyProps {
   roomState: RoomState
@@ -17,6 +17,189 @@ interface RoomLobbyProps {
 }
 
 type LobbyMode = "menu" | "create" | "join" | "waiting"
+
+// ============ HELPER COMPONENTS (defined outside to prevent remounts) ============
+
+// BGM toggle button
+function BGMToggle() {
+  const [playing, setPlaying] = useState(isBGMPlaying())
+
+  const handleToggle = () => {
+    const nowPlaying = toggleBGM()
+    setPlaying(nowPlaying)
+  }
+
+  return (
+    <button
+      onClick={handleToggle}
+      className={`
+        fixed bottom-4 left-4 z-30 
+        px-4 py-3 rounded-xl shadow-lg border-2 
+        transition-all hover:scale-105 flex items-center gap-2
+        ${playing 
+          ? "bg-green-100 border-green-400 hover:bg-green-50" 
+          : "bg-[#FAF8F0] border-amber-400 hover:bg-white"}
+      `}
+      title={playing ? "Mute music" : "Play music"}
+    >
+      <span className="text-xl">{playing ? "🎵" : "🔇"}</span>
+      <span className={`font-semibold text-sm ${playing ? "text-green-700" : "text-amber-800"}`}>
+        {playing ? "Music On" : "Music Off"}
+      </span>
+    </button>
+  )
+}
+
+// Instructions scroll component
+function InstructionsScroll() {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <>
+      <button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-4 right-4 z-30 bg-[#FAF8F0] hover:bg-white px-4 py-3 rounded-xl shadow-lg border-2 border-amber-400 transition-all hover:scale-105 flex items-center gap-2"
+      >
+        <span className="text-xl">📜</span>
+        <span className="text-amber-800 font-semibold text-sm">How to Play</span>
+      </button>
+
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
+          <div className="relative bg-[#FAF8F0] rounded-2xl border-4 border-amber-700/80 shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden animate-bounce-in">
+            <div className="bg-gradient-to-r from-amber-600 to-amber-700 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <span>📜</span> How to Play
+              </h2>
+              <button onClick={() => setIsOpen(false)} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors">
+                ✕
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4">
+              <div className="bg-white rounded-xl p-4 border border-amber-100">
+                <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><span className="text-lg">🎯</span> Goal</h3>
+                <p className="text-gray-600 text-sm">Answer trivia questions, move around the board, and collect the most coins to win!</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-amber-100">
+                <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><span className="text-lg">❓</span> Questions</h3>
+                <p className="text-gray-600 text-sm">Each player answers <strong>20 questions</strong>. You have <strong>20 seconds</strong> per question.</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-amber-100">
+                <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><span className="text-lg">💰</span> Scoring</h3>
+                <ul className="text-gray-600 text-sm space-y-1">
+                  <li>✅ <strong className="text-green-600">+100 coins</strong> for correct answers</li>
+                  <li>❌ <strong className="text-red-500">-50 coins</strong> for wrong/timeout</li>
+                  <li>🏠 <strong className="text-amber-600">+200 coins</strong> for passing GO</li>
+                </ul>
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-amber-100">
+                <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><span className="text-lg">🎲</span> Movement</h3>
+                <p className="text-gray-600 text-sm">Correct answers let you roll a die (1-6) and move that many spaces. Land on special tiles for bonuses or surprises!</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-amber-100">
+                <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><span className="text-lg">🎭</span> Special Tiles</h3>
+                <ul className="text-gray-600 text-sm space-y-1">
+                  <li>🎰 <strong>Chance/Casino</strong> - Random coin events</li>
+                  <li>📦 <strong>Community</strong> - Shared events</li>
+                  <li>💰 <strong>Tax</strong> - Pay coins</li>
+                  <li>🚔 <strong>Police</strong> - Recover stolen coins</li>
+                  <li>🎭 <strong>Heist</strong> - Steal from others!</li>
+                </ul>
+              </div>
+              <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                <h3 className="font-bold text-green-800 mb-2 flex items-center gap-2"><span className="text-lg">🏆</span> Winning</h3>
+                <p className="text-green-700 text-sm">After all 20 questions, the player with the <strong>most coins wins!</strong></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// Cream card with wood-style border
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div 
+      className={`bg-[#FAF8F0] rounded-2xl shadow-xl border-4 border-amber-700/80 ${className}`}
+      style={{ boxShadow: "0 10px 40px rgba(139, 69, 19, 0.2)" }}
+    >
+      {children}
+    </div>
+  )
+}
+
+// Green button (Monopoly money style)
+function GreenButton({ children, onClick, disabled, className = "", type = "button" }: { 
+  children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string; type?: "button" | "submit"
+}) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`
+        bg-gradient-to-b from-green-500 to-green-700 
+        hover:from-green-400 hover:to-green-600
+        text-white font-bold py-4 px-6 rounded-xl
+        shadow-lg shadow-green-800/30
+        transition-all duration-200
+        hover:-translate-y-0.5 active:translate-y-0
+        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0
+        border-b-4 border-green-800
+        ${className}
+      `}
+    >
+      {children}
+    </button>
+  )
+}
+
+// Blue button
+function BlueButton({ children, onClick, disabled, className = "", type = "button" }: { 
+  children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string; type?: "button" | "submit"
+}) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`
+        bg-gradient-to-b from-sky-400 to-sky-600 
+        hover:from-sky-300 hover:to-sky-500
+        text-white font-bold py-4 px-6 rounded-xl
+        shadow-lg shadow-sky-800/30
+        transition-all duration-200
+        hover:-translate-y-0.5 active:translate-y-0
+        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0
+        border-b-4 border-sky-700
+        ${className}
+      `}
+    >
+      {children}
+    </button>
+  )
+}
+
+// Sky background with clouds feel
+function SkyBackground({ children, showInstructions = true }: { children: React.ReactNode; showInstructions?: boolean }) {
+  return (
+    <div className="fixed inset-0 bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-200 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+        <div className="absolute top-20 left-10 w-64 h-32 bg-white rounded-full blur-3xl" />
+        <div className="absolute top-40 right-20 w-48 h-24 bg-white rounded-full blur-3xl" />
+        <div className="absolute bottom-40 left-1/3 w-56 h-28 bg-white rounded-full blur-3xl" />
+      </div>
+      {children}
+      <BGMToggle />
+      {showInstructions && <InstructionsScroll />}
+    </div>
+  )
+}
+
+// ============ MAIN COMPONENT ============
 
 export function RoomLobby({
   roomState,
@@ -35,7 +218,6 @@ export function RoomLobby({
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!playerName.trim()) return
-
     setIsLoading(true)
     setError(null)
     try {
@@ -51,7 +233,6 @@ export function RoomLobby({
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!playerName.trim() || !roomCode.trim()) return
-
     setIsLoading(true)
     setError(null)
     try {
@@ -64,392 +245,278 @@ export function RoomLobby({
     }
   }
 
-  // Show waiting room if connected
+  // Waiting room
   if (roomState.connectionState === "connected" && (mode === "waiting" || roomState.players.length > 0)) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl animate-pulse" />
-          <div
-            className="absolute top-1/3 right-10 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: "1s" }}
-          />
-          <div
-            className="absolute bottom-10 left-1/3 w-80 h-80 bg-yellow-500/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: "2s" }}
-          />
-        </div>
-
+      <SkyBackground>
         <div className="relative z-10 flex items-center justify-center min-h-full py-8 px-4">
-          <div className="w-full max-w-md">
-            <div className="backdrop-blur-xl bg-white/5 border-2 border-purple-500/30 rounded-3xl p-8 shadow-2xl">
-              {/* Room Code Display */}
-              <div className="text-center mb-8">
-                <div className="text-4xl mb-4">🎮</div>
-                <h1 className="text-3xl font-black mb-2">
-                  <span className="bg-gradient-to-r from-yellow-400 via-pink-500 to-cyan-400 bg-clip-text text-transparent">
-                    Game Lobby
-                  </span>
-                </h1>
-
-                <div className="mt-4 p-4 bg-purple-900/50 rounded-xl border border-purple-500/30">
-                  <p className="text-sm text-purple-300 mb-2">Room Code</p>
-                  <p className="text-4xl font-mono font-black text-cyan-400 tracking-widest">
+          <Card className="w-full max-w-md overflow-hidden">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+              <h1 className="text-2xl font-black text-white text-center tracking-wide">
+                🎲 Game Lobby
+              </h1>
+            </div>
+            
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <p className="text-amber-800 text-sm font-semibold mb-2 uppercase tracking-wider">Room Code</p>
+                <div className="inline-block bg-white rounded-xl px-6 py-3 border-2 border-amber-300 shadow-inner">
+                  <p className="text-3xl font-black text-green-700 tracking-[0.2em] font-mono">
                     {roomState.roomCode}
                   </p>
-                  <p className="text-xs text-purple-400 mt-2">Share this code with friends!</p>
                 </div>
+                <p className="text-amber-700/70 text-xs mt-2">Share this code with friends!</p>
               </div>
 
-              {/* Players List */}
               <div className="mb-6">
-                <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                  <span>👥</span> Players ({roomState.players.length})
-                </h2>
+                <p className="text-amber-800 text-sm font-semibold mb-3">Players ({roomState.players.length})</p>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {roomState.players.map((player, index) => (
                     <div
                       key={player.id}
                       className={`
-                        flex items-center gap-3 p-3 rounded-xl
-                        ${player.id === myPlayer?.id ? "bg-cyan-500/20 border border-cyan-500/50" : "bg-purple-900/30"}
+                        flex items-center gap-3 p-3 rounded-xl border-2
+                        ${player.id === myPlayer?.id 
+                          ? "bg-green-50 border-green-400" 
+                          : "bg-white border-amber-200"}
                       `}
                     >
-                      <span className="text-2xl">{["🔴", "🔵", "🟢", "🟡", "🟣", "🩷", "🟠", "🩵"][index % 8]}</span>
-                      <span className="font-semibold text-white flex-1">{player.name}</span>
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-md"
+                        style={{
+                          background: ["#e53935", "#1e88e5", "#43a047", "#fdd835", "#8e24aa", "#f06292", "#ff7043", "#26c6da"][index % 8]
+                        }}
+                      >
+                        {player.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-bold text-gray-800 flex-1">{player.name}</span>
                       {index === 0 && (
-                        <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full">
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-semibold border border-amber-300">
                           👑 Host
                         </span>
                       )}
                       {player.id === myPlayer?.id && (
-                        <span className="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded-full">You</span>
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold border border-green-300">
+                          You
+                        </span>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Status */}
-              <div className="text-center mb-6">
+              <div className="text-center mb-6 py-3 bg-amber-50 rounded-xl border border-amber-200">
                 {roomState.role === "host" ? (
-                  <p className="text-purple-300 text-sm">
-                    Waiting for players to join... Start when ready!
-                  </p>
+                  <p className="text-amber-800 text-sm font-medium">⏳ Waiting for players to join...</p>
                 ) : (
-                  <p className="text-purple-300 text-sm flex items-center justify-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    Waiting for host to start the game...
+                  <p className="text-amber-800 text-sm font-medium flex items-center justify-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    Waiting for host to start...
                   </p>
                 )}
               </div>
 
-              {/* Actions */}
               <div className="space-y-3">
                 {roomState.role === "host" && (
-                  <Button
-                    onClick={onStartGame}
-                    disabled={roomState.players.length < 1}
-                    className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-green-500/30 hover:scale-[1.02]"
-                  >
+                  <GreenButton onClick={onStartGame} className="w-full text-lg">
                     🚀 Start Game
-                  </Button>
+                  </GreenButton>
                 )}
-
-                <Button
+                <button
                   onClick={onLeaveRoom}
-                  variant="outline"
-                  className="w-full h-12 text-sm font-semibold border-2 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 rounded-xl transition-all bg-transparent"
+                  className="w-full py-3 text-amber-700 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium border border-transparent hover:border-red-200"
                 >
                   Leave Room
-                </Button>
+                </button>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </SkyBackground>
     )
   }
 
-  // Show error state
+  // Error state
   if (roomState.connectionState === "error") {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center">
-        <div className="backdrop-blur-xl bg-white/5 border-2 border-red-500/30 rounded-3xl p-8 shadow-2xl max-w-md text-center">
-          <div className="text-6xl mb-4">❌</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Connection Error</h2>
-          <p className="text-red-300 mb-6">{error || "Failed to connect. Please try again."}</p>
-          <Button
-            onClick={() => {
-              setMode("menu")
-              setError(null)
-              onLeaveRoom()
-            }}
-            className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-xl"
-          >
-            Back to Menu
-          </Button>
+      <SkyBackground>
+        <div className="relative z-10 flex items-center justify-center min-h-full p-4">
+          <Card className="max-w-md w-full p-8 text-center">
+            <div className="text-6xl mb-4">😵</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Connection Error</h2>
+            <p className="text-gray-600 mb-6">{error || "Failed to connect. Please try again."}</p>
+            <GreenButton onClick={() => { setMode("menu"); setError(null); onLeaveRoom(); }} className="w-full">
+              Back to Menu
+            </GreenButton>
+          </Card>
         </div>
-      </div>
+      </SkyBackground>
     )
   }
 
-  // Show connecting state
+  // Connecting state
   if (roomState.connectionState === "connecting") {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-purple-300 text-lg">Connecting...</p>
+      <SkyBackground>
+        <div className="relative z-10 flex items-center justify-center min-h-full">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-green-800 text-lg font-semibold">Connecting...</p>
+          </div>
         </div>
-      </div>
+      </SkyBackground>
     )
   }
 
   // Main menu
   if (mode === "menu") {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl animate-pulse" />
-          <div
-            className="absolute top-1/3 right-10 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: "1s" }}
-          />
-          <div
-            className="absolute bottom-10 left-1/3 w-80 h-80 bg-yellow-500/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: "2s" }}
-          />
-
-          {/* Floating emojis */}
-          {["🎲", "🪙", "🎯", "🎮", "🏆", "✨", "🎉", "💫"].map((emoji, i) => (
-            <div
-              key={i}
-              className="absolute text-3xl animate-float opacity-40"
-              style={{
-                left: `${10 + i * 12}%`,
-                top: `${20 + (i % 3) * 25}%`,
-                animationDelay: `${i * 0.3}s`,
-                animationDuration: `${3 + (i % 2)}s`,
-              }}
-            >
-              {emoji}
-            </div>
-          ))}
-        </div>
-
+      <SkyBackground>
         <div className="relative z-10 flex items-center justify-center min-h-full py-8 px-4">
           <div className="w-full max-w-md">
-            <div className="backdrop-blur-xl bg-white/5 border-2 border-purple-500/30 rounded-3xl p-8 shadow-2xl">
-              {/* Title */}
-              <div className="text-center mb-8">
-                <div className="text-6xl mb-4">🎲</div>
-                <h1 className="text-5xl font-black mb-2">
-                  <span className="bg-gradient-to-r from-yellow-400 via-pink-500 to-cyan-400 bg-clip-text text-transparent">
-                    Way of Life
-                  </span>
+            <Card className="overflow-hidden">
+              <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-8 text-center">
+                <div className="text-6xl mb-3">🎲</div>
+                <h1 className="text-4xl font-black text-white tracking-tight mb-1">
+                  Way of Life
                 </h1>
-                <p className="text-lg text-cyan-300 font-semibold">Answer. Move. Survive. Thrive.</p>
+                <p className="text-green-100 font-medium">Answer • Move • Prosper</p>
               </div>
+              
+              <div className="p-6">
+                <div className="space-y-3 mb-8">
+                  <GreenButton onClick={() => setMode("create")} className="w-full text-lg">
+                    🏠 Create Room
+                  </GreenButton>
+                  <BlueButton onClick={() => setMode("join")} className="w-full text-lg">
+                    🚪 Join Room
+                  </BlueButton>
+                </div>
 
-              {/* Menu Options */}
-              <div className="space-y-4">
-                <Button
-                  onClick={() => setMode("create")}
-                  className="w-full h-16 text-xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-pink-500/30 hover:scale-[1.02]"
-                >
-                  🏠 Create Room
-                </Button>
-
-                <Button
-                  onClick={() => setMode("join")}
-                  className="w-full h-16 text-xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-cyan-500/30 hover:scale-[1.02]"
-                >
-                  🚪 Join Room
-                </Button>
+                <div className="space-y-3">
+                  <p className="text-amber-800 text-xs font-semibold uppercase tracking-wider mb-2">How to Play</p>
+                  <div className="flex items-center gap-3 text-gray-700 text-sm bg-white p-3 rounded-xl border border-amber-100">
+                    <span className="text-xl">🎯</span>
+                    <span>Answer <strong>20 questions</strong> to move around the board</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-700 text-sm bg-white p-3 rounded-xl border border-amber-100">
+                    <span className="text-xl">💰</span>
+                    <span><strong className="text-green-600">+100</strong> correct, <strong className="text-red-500">-50</strong> wrong</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-700 text-sm bg-white p-3 rounded-xl border border-amber-100">
+                    <span className="text-xl">🏆</span>
+                    <span>Most coins at the end <strong>wins!</strong></span>
+                  </div>
+                </div>
               </div>
-
-              {/* How to play */}
-              <div className="mt-8 pt-6 border-t border-purple-500/30">
-                <h2 className="font-bold text-yellow-400 text-sm mb-3 flex items-center gap-2">
-                  <span>📖</span> How to Play
-                </h2>
-                <ul className="space-y-2 text-sm text-purple-200">
-                  <li className="flex items-start gap-2">
-                    <span className="text-pink-400">🎯</span>
-                    <span>
-                      Answer <strong className="text-cyan-300">20 questions</strong> to move around the board
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-cyan-400">⏱️</span>
-                    <span>
-                      <strong className="text-yellow-300">20 seconds</strong> per question
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-400">💰</span>
-                    <span>
-                      <strong className="text-green-400">+100</strong> correct,{" "}
-                      <strong className="text-red-400">-50</strong> wrong
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-purple-400">🎲</span>
-                    <span>
-                      Land on tiles for <strong className="text-pink-300">wild events!</strong>
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="text-center mt-6">
-              <p className="text-purple-400 text-sm">✨ P2P Multiplayer - No server needed! ✨</p>
-            </div>
+            </Card>
           </div>
         </div>
-      </div>
+      </SkyBackground>
     )
   }
 
-  // Create room form
+  // Create room
   if (mode === "create") {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl animate-pulse" />
-          <div
-            className="absolute top-1/3 right-10 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: "1s" }}
-          />
-        </div>
-
+      <SkyBackground>
         <div className="relative z-10 flex items-center justify-center min-h-full py-8 px-4">
-          <div className="w-full max-w-md">
-            <div className="backdrop-blur-xl bg-white/5 border-2 border-purple-500/30 rounded-3xl p-8 shadow-2xl">
-              <div className="text-center mb-6">
-                <div className="text-5xl mb-4">🏠</div>
-                <h2 className="text-3xl font-black text-white">Create Room</h2>
-              </div>
-
-              <form onSubmit={handleCreateRoom} className="space-y-4">
+          <Card className="w-full max-w-md overflow-hidden">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+              <h2 className="text-xl font-bold text-white text-center">🏠 Create Room</h2>
+            </div>
+            
+            <div className="p-6">
+              <form onSubmit={handleCreateRoom} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-bold text-purple-300 mb-2">Your Name</label>
+                  <label className="block text-amber-800 text-sm font-semibold mb-2">Your Name</label>
                   <Input
                     type="text"
                     placeholder="Enter your name..."
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
                     disabled={isLoading}
-                    className="text-center text-lg h-14 bg-purple-900/50 border-2 border-purple-500/50 text-white placeholder:text-purple-400 focus:border-pink-500 focus:ring-pink-500 rounded-xl"
-                    autoFocus
+                    className="w-full h-12 text-lg bg-white border-2 border-amber-200 text-gray-800 placeholder:text-gray-400 rounded-xl focus:border-green-500 focus:ring-green-500"
                   />
                 </div>
 
-                <Button
-                  type="submit"
-                  disabled={isLoading || !playerName.trim()}
-                  className="w-full h-14 text-lg font-bold bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-xl transition-all duration-200 shadow-lg"
-                >
+                <GreenButton type="submit" disabled={isLoading || !playerName.trim()} className="w-full text-lg">
                   {isLoading ? "Creating..." : "Create Room"}
-                </Button>
+                </GreenButton>
 
-                <Button
+                <button
                   type="button"
                   onClick={() => setMode("menu")}
-                  variant="outline"
-                  className="w-full h-12 border-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 rounded-xl bg-transparent"
+                  className="w-full py-3 text-amber-700 hover:text-amber-900 transition-colors font-medium"
                 >
                   ← Back
-                </Button>
+                </button>
               </form>
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </SkyBackground>
     )
   }
 
-  // Join room form
+  // Join room
   if (mode === "join") {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-64 h-64 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" />
-          <div
-            className="absolute top-1/3 right-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: "1s" }}
-          />
-        </div>
-
+      <SkyBackground>
         <div className="relative z-10 flex items-center justify-center min-h-full py-8 px-4">
-          <div className="w-full max-w-md">
-            <div className="backdrop-blur-xl bg-white/5 border-2 border-purple-500/30 rounded-3xl p-8 shadow-2xl">
-              <div className="text-center mb-6">
-                <div className="text-5xl mb-4">🚪</div>
-                <h2 className="text-3xl font-black text-white">Join Room</h2>
-              </div>
-
-              <form onSubmit={handleJoinRoom} className="space-y-4">
+          <Card className="w-full max-w-md overflow-hidden">
+            <div className="bg-gradient-to-r from-sky-500 to-sky-600 px-6 py-4">
+              <h2 className="text-xl font-bold text-white text-center">🚪 Join Room</h2>
+            </div>
+            
+            <div className="p-6">
+              <form onSubmit={handleJoinRoom} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-bold text-purple-300 mb-2">Room Code</label>
+                  <label className="block text-amber-800 text-sm font-semibold mb-2">Room Code</label>
                   <Input
                     type="text"
-                    placeholder="Enter 6-digit code..."
+                    placeholder="XXXXXX"
                     value={roomCode}
                     onChange={(e) => setRoomCode(e.target.value.toUpperCase().slice(0, 6))}
                     disabled={isLoading}
-                    className="text-center text-2xl font-mono font-bold tracking-widest h-16 bg-purple-900/50 border-2 border-purple-500/50 text-cyan-400 placeholder:text-purple-400 focus:border-cyan-500 focus:ring-cyan-500 rounded-xl uppercase"
-                    autoFocus
+                    className="w-full h-14 text-2xl font-mono font-bold tracking-[0.3em] text-center bg-white border-2 border-amber-200 text-sky-700 placeholder:text-gray-300 rounded-xl focus:border-sky-500 focus:ring-sky-500 uppercase"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-purple-300 mb-2">Your Name</label>
+                  <label className="block text-amber-800 text-sm font-semibold mb-2">Your Name</label>
                   <Input
                     type="text"
                     placeholder="Enter your name..."
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
                     disabled={isLoading}
-                    className="text-center text-lg h-14 bg-purple-900/50 border-2 border-purple-500/50 text-white placeholder:text-purple-400 focus:border-pink-500 focus:ring-pink-500 rounded-xl"
+                    className="w-full h-12 text-lg bg-white border-2 border-amber-200 text-gray-800 placeholder:text-gray-400 rounded-xl focus:border-sky-500 focus:ring-sky-500"
                   />
                 </div>
 
                 {error && (
-                  <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm text-center">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm text-center">
                     {error}
                   </div>
                 )}
 
-                <Button
-                  type="submit"
-                  disabled={isLoading || !playerName.trim() || roomCode.length !== 6}
-                  className="w-full h-14 text-lg font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white rounded-xl transition-all duration-200 shadow-lg"
-                >
+                <BlueButton type="submit" disabled={isLoading || !playerName.trim() || roomCode.length !== 6} className="w-full text-lg">
                   {isLoading ? "Joining..." : "Join Room"}
-                </Button>
+                </BlueButton>
 
-                <Button
+                <button
                   type="button"
-                  onClick={() => {
-                    setMode("menu")
-                    setError(null)
-                  }}
-                  variant="outline"
-                  className="w-full h-12 border-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 rounded-xl bg-transparent"
+                  onClick={() => { setMode("menu"); setError(null); }}
+                  className="w-full py-3 text-amber-700 hover:text-amber-900 transition-colors font-medium"
                 >
                   ← Back
-                </Button>
+                </button>
               </form>
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </SkyBackground>
     )
   }
 

@@ -5,7 +5,7 @@ import { TILES } from "./board-tiles"
  * @param maxValue - Maximum value (default 4 for d4)
  * @returns Random number from 1 to maxValue
  */
-export function rollDie(maxValue = 4): number {
+export function rollDie(maxValue = 6): number {
   return Math.floor(Math.random() * maxValue) + 1
 }
 

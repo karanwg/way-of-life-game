@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import type { Player } from "@/lib/types"
+import { getTileLayout } from "@/components/board"
 
 interface FlyingCoinsProps {
   fromPlayerId: string
@@ -9,16 +10,6 @@ interface FlyingCoinsProps {
   amount: number
   players: Player[]
   onComplete: () => void
-}
-
-// Calculate elliptical positions for 12 tiles (same as Board)
-function getTilePosition(index: number) {
-  const angle = (index / 12) * 2 * Math.PI - Math.PI / 2
-  const radiusX = 38
-  const radiusY = 32
-  const x = 50 + radiusX * Math.cos(angle)
-  const y = 50 + radiusY * Math.sin(angle)
-  return { x, y }
 }
 
 export function FlyingCoins({
@@ -40,7 +31,6 @@ export function FlyingCoins({
       return
     }
 
-    // Create coins with staggered start times
     const numCoins = Math.min(Math.max(3, Math.floor(amount / 50)), 8)
     const initialCoins = Array.from({ length: numCoins }, (_, i) => ({
       id: i,
@@ -48,14 +38,13 @@ export function FlyingCoins({
     }))
     setCoins(initialCoins)
 
-    // Animate coins
-    const duration = 800 // ms
-    const staggerDelay = 80 // ms between each coin
+    const duration = 800
+    const staggerDelay = 80
     const startTime = Date.now()
 
     const animate = () => {
       const elapsed = Date.now() - startTime
-
+      
       setCoins((prev) =>
         prev.map((coin) => {
           const coinStartTime = coin.id * staggerDelay
@@ -79,61 +68,49 @@ export function FlyingCoins({
 
   if (!fromPlayer || !toPlayer || isComplete) return null
 
-  const fromPos = getTilePosition(fromPlayer.currentTileId)
-  const toPos = getTilePosition(toPlayer.currentTileId)
+  const fromLayout = getTileLayout(fromPlayer.currentTileId)
+  const toLayout = getTileLayout(toPlayer.currentTileId)
 
-  // Add offset for pawn position (below tile)
-  const fromY = fromPos.y + 8
-  const toY = toPos.y + 8
+  const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
+    <div className="absolute inset-0 pointer-events-none overflow-visible z-40">
       {coins.map((coin) => {
-        // Easing function for smooth arc
-        const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
         const easedProgress = easeOutCubic(coin.progress)
-
-        // Calculate current position with arc
-        const currentX = fromPos.x + (toPos.x - fromPos.x) * easedProgress
-        const currentY = fromY + (toY - fromY) * easedProgress
-
-        // Add arc (parabola) - coins fly up then down
-        const arcHeight = 15 // percentage points
-        const arc = -4 * arcHeight * easedProgress * (easedProgress - 1)
-
-        // Scale and opacity based on progress
-        const scale = 1 + Math.sin(easedProgress * Math.PI) * 0.3
-        const opacity = coin.progress < 0.1 ? coin.progress * 10 : coin.progress > 0.9 ? (1 - coin.progress) * 10 : 1
+        
+        const arcHeight = 8 * (1 - Math.pow(2 * easedProgress - 1, 2))
+        const x = fromLayout.centerX + (toLayout.centerX - fromLayout.centerX) * easedProgress
+        const y = fromLayout.centerY + (toLayout.centerY - fromLayout.centerY) * easedProgress - arcHeight
+        
+        const scale = 0.8 + 0.4 * Math.sin(easedProgress * Math.PI)
+        const opacity = easedProgress < 0.9 ? 1 : 1 - (easedProgress - 0.9) * 10
 
         return (
           <div
             key={coin.id}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2"
+            className="absolute text-xl"
             style={{
-              left: `${currentX}%`,
-              top: `${currentY - arc}%`,
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: `translate(-50%, -50%) scale(${scale})`,
               opacity,
-              transform: `translate(-50%, -50%) scale(${scale}) rotate(${easedProgress * 360}deg)`,
-              transition: "none",
             }}
           >
-            <div className="text-2xl drop-shadow-lg">🪙</div>
+            🪙
           </div>
         )
       })}
-
-      {/* Amount indicator that follows the coins */}
-      {coins.length > 0 && coins[Math.floor(coins.length / 2)].progress > 0.3 && (
+      
+      {coins.some((c) => c.progress > 0.4 && c.progress < 0.8) && (
         <div
-          className="absolute transform -translate-x-1/2 -translate-y-1/2 animate-bounce-in"
+          className="absolute text-sm font-bold text-amber-500 drop-shadow-lg"
           style={{
-            left: `${(fromPos.x + toPos.x) / 2}%`,
-            top: `${(fromY + toY) / 2 - 12}%`,
+            left: `${(fromLayout.centerX + toLayout.centerX) / 2}%`,
+            top: `${(fromLayout.centerY + toLayout.centerY) / 2 - 5}%`,
+            transform: "translate(-50%, -50%)",
           }}
         >
-          <div className="bg-yellow-500/90 text-black font-black text-sm px-2 py-1 rounded-full shadow-lg">
-            +{amount}
-          </div>
+          +{amount}
         </div>
       )}
     </div>

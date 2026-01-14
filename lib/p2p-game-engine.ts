@@ -14,10 +14,11 @@ import { QUESTIONS } from "./questions"
 import { getTileById, TILES } from "./board-tiles"
 import { rollDie, movePlayerForward, didPassHome, rollIdentityTheftChance, rollPonziOutcome } from "./board-logic"
 
-const LAP_BONUS_AMOUNT = 300
+const LAP_BONUS_AMOUNT = 200
 
 export interface MoveResult {
-  dieRoll: number | null
+  dieRoll: number | null // Total movement (sum of all rolls)
+  dieRolls: number[] // Individual rolls (for showing "6! Roll again!")
   lapBonus: { lapsCompleted: number; coinsAwarded: number } | null
   tileEvent: TileEventData | null
   // Interactive prompts (only one can be active)
@@ -120,6 +121,7 @@ export class P2PGameEngine {
 
     const result: MoveResult = {
       dieRoll: null,
+      dieRolls: [],
       lapBonus: null,
       tileEvent: null,
     }
@@ -133,8 +135,9 @@ export class P2PGameEngine {
     }
 
     // Step 2: Roll die and move
-    const dieRoll = rollDie(4) // d4
+    const dieRoll = rollDie(6)
     result.dieRoll = dieRoll
+    result.dieRolls = [dieRoll]
 
     const previousTileId = player.currentTileId
     const newTileId = movePlayerForward(previousTileId, dieRoll)
@@ -248,6 +251,137 @@ export class P2PGameEngine {
             coinsDelta: 0,
           }
           break
+
+        case "robin_hood": {
+          // Steal from richest, give to poorest
+          const others = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
+          if (others.length > 0) {
+            const richest = others.reduce((a, b) => a.coins > b.coins ? a : b)
+            const poorest = others.reduce((a, b) => a.coins < b.coins ? a : b)
+            const stealAmount = Math.min(150, richest.coins)
+            richest.coins -= stealAmount
+            poorest.coins += stealAmount
+            result.tileEvent = {
+              tileName: tile.name,
+              tileText: `🦸 Stole ${stealAmount} from ${richest.name}, gave to ${poorest.name}!`,
+              coinsDelta: 0,
+              isGlobal: true,
+            }
+          } else {
+            result.tileEvent = { tileName: tile.name, tileText: "No one to help!", coinsDelta: 0 }
+          }
+          break
+        }
+
+        case "tax_collector": {
+          // Take 25 coins from every other player
+          const victims = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
+          let totalCollected = 0
+          victims.forEach(v => {
+            const take = Math.min(25, v.coins)
+            v.coins -= take
+            totalCollected += take
+          })
+          player.coins += totalCollected
+          result.tileEvent = {
+            tileName: tile.name,
+            tileText: `💸 Collected ${totalCollected} coins from ${victims.length} players!`,
+            coinsDelta: totalCollected,
+            isGlobal: true,
+          }
+          break
+        }
+
+        case "party_time": {
+          // Everyone gets 50 coins!
+          const allPlayers = Array.from(this.state.players.values())
+          allPlayers.forEach(p => { p.coins += 50 })
+          result.tileEvent = {
+            tileName: tile.name,
+            tileText: `🎉 PARTY! Everyone got 50 coins!`,
+            coinsDelta: 50,
+            isGlobal: true,
+          }
+          break
+        }
+
+        case "swap_meet": {
+          // Swap coins with random player
+          const swapTargets = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
+          if (swapTargets.length > 0) {
+            const target = swapTargets[Math.floor(Math.random() * swapTargets.length)]
+            const myCoins = player.coins
+            const theirCoins = target.coins
+            player.coins = theirCoins
+            target.coins = myCoins
+            const diff = theirCoins - myCoins
+            result.tileEvent = {
+              tileName: tile.name,
+              tileText: `🔄 Swapped coins with ${target.name}! ${diff >= 0 ? '+' : ''}${diff} for you!`,
+              coinsDelta: diff,
+              isGlobal: true,
+            }
+          } else {
+            result.tileEvent = { tileName: tile.name, tileText: "No one to swap with!", coinsDelta: 0 }
+          }
+          break
+        }
+
+        case "banana_peel": {
+          // Push random player back 3 spaces
+          const slipTargets = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
+          if (slipTargets.length > 0) {
+            const victim = slipTargets[Math.floor(Math.random() * slipTargets.length)]
+            // Move back 3 spaces (handle wrap-around)
+            victim.currentTileId = ((victim.currentTileId - 3) % 24 + 24) % 24
+            result.tileEvent = {
+              tileName: tile.name,
+              tileText: `🍌 ${victim.name} slipped and fell back 3 spaces!`,
+              coinsDelta: 0,
+              isGlobal: true,
+            }
+          } else {
+            result.tileEvent = { tileName: tile.name, tileText: "No one to prank!", coinsDelta: 0 }
+          }
+          break
+        }
+
+        case "coin_magnet": {
+          // Steal 20 coins from each player
+          const magnetVictims = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
+          let totalStolen = 0
+          magnetVictims.forEach(v => {
+            const take = Math.min(20, v.coins)
+            v.coins -= take
+            totalStolen += take
+          })
+          player.coins += totalStolen
+          result.tileEvent = {
+            tileName: tile.name,
+            tileText: `🧲 Attracted ${totalStolen} coins from everyone!`,
+            coinsDelta: totalStolen,
+            isGlobal: true,
+          }
+          break
+        }
+
+        case "money_bomb": {
+          // Everyone else loses 50 coins
+          const bombVictims = Array.from(this.state.players.values()).filter(p => p.id !== playerId)
+          let totalLost = 0
+          bombVictims.forEach(v => {
+            const lose = Math.min(50, v.coins)
+            v.coins -= lose
+            totalLost += lose
+          })
+          result.tileEvent = {
+            tileName: tile.name,
+            tileText: `💣 BOOM! Others lost ${totalLost} coins total!`,
+            coinsDelta: 0,
+            isGlobal: true,
+          }
+          break
+        }
       }
     }
 

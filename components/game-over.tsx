@@ -1,7 +1,6 @@
 "use client"
 
 import type { Player } from "@/lib/types"
-import { Button } from "@/components/ui/button"
 import { getPawnColor } from "./player-pawn"
 
 interface GameOverProps {
@@ -12,122 +11,120 @@ interface GameOverProps {
 export function GameOver({ players, onPlayAgain }: GameOverProps) {
   const sortedPlayers = [...players].sort((a, b) => b.coins - a.coins)
   const topThree = sortedPlayers.slice(0, 3)
-
   const podiumOrder = topThree.length >= 3 ? [topThree[1], topThree[0], topThree[2]] : topThree
-  const podiumHeights = ["h-24", "h-32", "h-20"]
-  const podiumColors = ["from-gray-400 to-gray-500", "from-yellow-400 to-amber-500", "from-orange-600 to-orange-700"]
+  const podiumHeights = ["h-20", "h-28", "h-16"]
   const medals = ["🥈", "🥇", "🥉"]
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center p-4 overflow-hidden">
-      {/* Confetti background */}
+    <div className="fixed inset-0 bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-200 overflow-hidden">
+      {/* Clouds */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
+        <div className="absolute top-10 left-20 w-64 h-32 bg-white rounded-full blur-3xl" />
+        <div className="absolute top-32 right-32 w-48 h-24 bg-white rounded-full blur-3xl" />
+      </div>
+      
+      {/* Confetti */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(50)].map((_, i) => (
+        {[...Array(25)].map((_, i) => (
           <div
             key={i}
-            className="absolute animate-float"
+            className="absolute text-2xl animate-float"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
               animationDelay: `${Math.random() * 3}s`,
               animationDuration: `${3 + Math.random() * 2}s`,
+              opacity: 0.6,
             }}
           >
-            {["🎉", "🎊", "✨", "🌟", "💫", "🪙"][Math.floor(Math.random() * 6)]}
+            {["🎉", "🎊", "✨", "🌟", "🪙"][Math.floor(Math.random() * 5)]}
           </div>
         ))}
       </div>
 
-      <div className="relative z-10 max-w-2xl w-full text-center">
-        {/* Title */}
-        <div className="mb-8">
-          <h1 className="text-5xl font-black mb-2">
-            <span className="bg-gradient-to-r from-yellow-400 via-pink-500 to-cyan-400 bg-clip-text text-transparent">
-              Game Over!
-            </span>
-          </h1>
-          <p className="text-xl text-purple-300">Thanks for playing Way of Life</p>
-        </div>
+      <div className="relative z-10 flex items-center justify-center min-h-full p-4">
+        <div className="max-w-xl w-full">
+          <div className="bg-[#FAF8F0] rounded-2xl border-4 border-amber-700/80 shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-6 text-center">
+              <h1 className="text-3xl font-black text-white mb-1">🏆 Game Over! 🏆</h1>
+              <p className="text-green-100 font-medium">Thanks for playing Way of Life!</p>
+            </div>
+            
+            <div className="p-6">
+              {/* Podium */}
+              {topThree.length > 0 && (
+                <div className="flex items-end justify-center gap-3 mb-6">
+                  {podiumOrder.map((player, displayIndex) => {
+                    if (!player) return null
+                    const actualIndex = displayIndex === 1 ? 0 : displayIndex === 0 ? 1 : 2
+                    const pawnColor = getPawnColor(sortedPlayers.indexOf(player))
 
-        {/* Podium */}
-        {topThree.length > 0 && (
-          <div className="flex items-end justify-center gap-4 mb-8">
-            {podiumOrder.map((player, displayIndex) => {
-              if (!player) return null
-              const actualIndex = displayIndex === 1 ? 0 : displayIndex === 0 ? 1 : 2
-              const pawnColor = getPawnColor(sortedPlayers.indexOf(player))
+                    return (
+                      <div key={player.id} className="flex flex-col items-center">
+                        <div className="mb-2 text-center">
+                          <span className="text-3xl block mb-1">{medals[displayIndex]}</span>
+                          <div
+                            className={`w-10 h-10 rounded-full bg-gradient-to-br ${pawnColor.bg} mx-auto mb-1 flex items-center justify-center text-white font-bold border-2 border-white shadow-md`}
+                          >
+                            {player.name.charAt(0).toUpperCase()}
+                          </div>
+                          <p className="text-gray-800 font-bold text-sm truncate max-w-[70px]">{player.name}</p>
+                          <p className="text-amber-700 font-bold text-sm">🪙 {player.coins}</p>
+                        </div>
 
-              return (
-                <div key={player.id} className="flex flex-col items-center">
-                  {/* Player info */}
-                  <div className="mb-2 text-center">
-                    <span className="text-4xl mb-1 block">{medals[displayIndex]}</span>
-                    <div
-                      className={`w-12 h-12 rounded-full bg-gradient-to-br ${pawnColor.bg} mx-auto mb-1 flex items-center justify-center text-white font-bold text-lg shadow-lg`}
-                      style={{ boxShadow: `0 0 20px ${pawnColor.shadow}` }}
-                    >
-                      {player.name.charAt(0)}
-                    </div>
-                    <p className="text-white font-bold text-sm truncate max-w-[80px]">{player.name}</p>
-                    <p className="text-yellow-400 font-bold flex items-center justify-center gap-1">
-                      <span>🪙</span>
-                      {player.coins}
-                    </p>
-                  </div>
+                        <div
+                          className={`
+                            w-16 ${podiumHeights[displayIndex]}
+                            ${displayIndex === 1 
+                              ? "bg-gradient-to-t from-amber-600 to-amber-400 border-amber-700" 
+                              : displayIndex === 0 
+                                ? "bg-gradient-to-t from-gray-500 to-gray-400 border-gray-600" 
+                                : "bg-gradient-to-t from-orange-700 to-orange-500 border-orange-800"}
+                            rounded-t-lg flex items-center justify-center
+                            border-2 border-b-0
+                          `}
+                        >
+                          <span className="text-xl font-black text-white">{actualIndex + 1}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
-                  {/* Podium block */}
-                  <div
-                    className={`
-                      w-20 ${podiumHeights[displayIndex]}
-                      bg-gradient-to-t ${podiumColors[displayIndex]}
-                      rounded-t-lg flex items-center justify-center
-                      shadow-lg
-                    `}
-                  >
-                    <span className="text-2xl font-black text-white/80">{actualIndex + 1}</span>
+              {/* Other players */}
+              {sortedPlayers.length > 3 && (
+                <div className="mb-6">
+                  <p className="text-amber-800 text-xs font-semibold mb-2 uppercase tracking-wider">Other Players</p>
+                  <div className="space-y-2 max-h-28 overflow-y-auto">
+                    {sortedPlayers.slice(3).map((player, index) => {
+                      const pawnColor = getPawnColor(index + 3)
+                      return (
+                        <div key={player.id} className="flex items-center justify-between px-3 py-2 bg-white rounded-xl border border-amber-100">
+                          <div className="flex items-center gap-3">
+                            <span className="text-amber-600 font-bold w-5 text-sm">#{index + 4}</span>
+                            <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${pawnColor.bg} border border-white`} />
+                            <span className="text-gray-800 font-medium text-sm">{player.name}</span>
+                          </div>
+                          <span className="text-amber-700 font-bold text-sm">🪙 {player.coins}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
+              )}
 
-        {/* Full leaderboard */}
-        {sortedPlayers.length > 3 && (
-          <div className="mb-8 bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-purple-500/30">
-            <h2 className="text-lg font-bold text-white mb-3">Final Standings</h2>
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {sortedPlayers.slice(3).map((player, index) => {
-                const pawnColor = getPawnColor(index + 3)
-                return (
-                  <div key={player.id} className="flex items-center justify-between px-3 py-2 bg-white/5 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <span className="text-purple-400 font-bold w-6">#{index + 4}</span>
-                      <div
-                        className={`w-5 h-5 rounded-full bg-gradient-to-br ${pawnColor.bg}`}
-                        style={{ boxShadow: `0 0 6px ${pawnColor.shadow}` }}
-                      />
-                      <span className="text-white font-medium text-sm">{player.name}</span>
-                    </div>
-                    <span className="text-yellow-400 font-bold text-sm flex items-center gap-1">
-                      <span>🪙</span>
-                      {player.coins}
-                    </span>
-                  </div>
-                )
-              })}
+              {/* Play Again */}
+              <button
+                onClick={onPlayAgain}
+                className="w-full py-4 text-lg font-bold text-white rounded-xl bg-gradient-to-b from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 shadow-lg shadow-green-800/30 border-b-4 border-green-800 transition-all hover:-translate-y-0.5"
+              >
+                🎮 Play Again
+              </button>
             </div>
           </div>
-        )}
-
-        {/* Play Again button */}
-        <Button
-          onClick={onPlayAgain}
-          size="lg"
-          className="px-12 py-6 text-lg font-bold bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg hover:shadow-pink-500/30 transition-all"
-        >
-          🎮 Play Again
-        </Button>
+        </div>
       </div>
     </div>
   )

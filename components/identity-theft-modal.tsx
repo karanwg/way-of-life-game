@@ -25,9 +25,6 @@ export function IdentityTheftModal({ data, myPlayerName, onDismiss }: IdentityTh
   const otherPlayer = data.player1Name === myPlayerName 
     ? data.player2Name 
     : data.player1Name
-  const otherOldCoins = data.player1Name === myPlayerName 
-    ? data.player2OldCoins 
-    : data.player1OldCoins
   const gained = myNewCoins > myOldCoins
   const coinDiff = Math.abs(myNewCoins - myOldCoins)
 
@@ -57,45 +54,38 @@ export function IdentityTheftModal({ data, myPlayerName, onDismiss }: IdentityTh
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Dramatic backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-pulse-slow" />
+      {/* Fun backdrop */}
+      <div className="absolute inset-0 bg-purple-900/90 backdrop-blur-md" />
       
-      {/* Glitch effect overlay */}
+      {/* Playful overlay */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-500/10 via-transparent to-cyan-500/10" />
-        {/* Scan lines */}
-        <div 
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,255,0.1) 2px, rgba(0,255,255,0.1) 4px)",
-          }}
-        />
+        <div className="absolute inset-0 bg-gradient-to-b from-pink-500/10 via-transparent to-purple-500/10" />
       </div>
 
       {/* Main content */}
       <div className="relative z-10 text-center max-w-lg mx-4">
         {/* Phase 1: Intro */}
         {phase === "intro" && (
-          <div className="animate-pulse">
-            <div className="text-8xl mb-4 animate-bounce">🎭</div>
-            <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-cyan-400 animate-pulse">
-              IDENTITY THEFT
+          <div className="bg-white rounded-2xl p-8 shadow-playful border-4 border-purple-400 animate-bounce-in">
+            <div className="text-7xl mb-4 animate-wiggle">🎭</div>
+            <h1 className="text-3xl font-black text-purple-600">
+              IDENTITY THEFT!
             </h1>
-            <p className="text-xl text-purple-300 mt-2">Initiating coin swap...</p>
+            <p className="text-xl text-purple-500 mt-2 font-medium">Swapping coins...</p>
           </div>
         )}
 
         {/* Phase 2: Swap animation */}
         {phase === "swap" && (
-          <div className="space-y-6">
-            <div className="text-6xl animate-spin-slow">🔄</div>
+          <div className="bg-white rounded-2xl p-8 shadow-playful border-4 border-purple-400 animate-bounce-in">
+            <div className="text-5xl mb-6 animate-spin-slow">🔄</div>
             
             <div className="flex items-center justify-center gap-8">
               {/* Player 1 */}
-              <div className="text-center">
-                <div className="text-4xl mb-2">👤</div>
-                <p className="text-lg font-bold text-white">{data.player1Name}</p>
-                <p className="text-2xl font-mono text-yellow-400">{data.player1OldCoins}</p>
+              <div className="text-center bg-amber-100 rounded-xl p-4 border-2 border-amber-300">
+                <div className="text-3xl mb-2">👤</div>
+                <p className="text-lg font-bold text-gray-800">{data.player1Name}</p>
+                <p className="text-xl font-mono text-amber-600 font-bold">🪙 {data.player1OldCoins}</p>
               </div>
               
               {/* Swap arrows */}
@@ -104,76 +94,76 @@ export function IdentityTheftModal({ data, myPlayerName, onDismiss }: IdentityTh
               </div>
               
               {/* Player 2 */}
-              <div className="text-center">
-                <div className="text-4xl mb-2">👤</div>
-                <p className="text-lg font-bold text-white">{data.player2Name}</p>
-                <p className="text-2xl font-mono text-yellow-400">{data.player2OldCoins}</p>
+              <div className="text-center bg-amber-100 rounded-xl p-4 border-2 border-amber-300">
+                <div className="text-3xl mb-2">👤</div>
+                <p className="text-lg font-bold text-gray-800">{data.player2Name}</p>
+                <p className="text-xl font-mono text-amber-600 font-bold">🪙 {data.player2OldCoins}</p>
               </div>
             </div>
             
-            <p className="text-xl text-cyan-300 animate-pulse">Swapping identities...</p>
+            <p className="text-xl text-purple-600 font-bold mt-6 animate-pulse">Swapping...</p>
           </div>
         )}
 
         {/* Phase 3: Result */}
         {phase === "result" && (
-          <div className="space-y-6">
-            <div className="text-7xl mb-4">
+          <div className="bg-white rounded-2xl p-8 shadow-playful border-4 border-purple-400 animate-bounce-in">
+            <div className="text-6xl mb-4">
               {isMyEvent ? (gained ? "🎉" : "😱") : "🎭"}
             </div>
             
-            <h1 className={`text-5xl font-black ${
+            <h1 className={`text-4xl font-black ${
               isMyEvent 
-                ? (gained ? "text-green-400" : "text-red-400")
-                : "text-purple-400"
+                ? (gained ? "text-emerald-600" : "text-red-500")
+                : "text-purple-600"
             }`}>
               {isMyEvent 
                 ? (gained ? "JACKPOT!" : "OH NO!")
-                : "IDENTITY SWAP!"
+                : "SWAP COMPLETE!"
               }
             </h1>
 
             {isMyEvent ? (
-              <div className="space-y-4">
-                <p className="text-xl text-gray-300">
-                  You swapped coins with <span className="text-purple-400 font-bold">{otherPlayer}</span>
+              <div className="space-y-4 mt-4">
+                <p className="text-lg text-gray-700 font-medium">
+                  You swapped with <span className="text-purple-600 font-bold">{otherPlayer}</span>
                 </p>
                 
                 <div className={`
-                  inline-block px-8 py-4 rounded-2xl
+                  inline-block px-8 py-4 rounded-2xl border-3
                   ${gained 
-                    ? "bg-green-500/20 border-2 border-green-400" 
-                    : "bg-red-500/20 border-2 border-red-400"
+                    ? "bg-emerald-100 border-emerald-400" 
+                    : "bg-red-100 border-red-400"
                   }
                 `}>
                   <div className="flex items-center justify-center gap-4">
-                    <span className="text-3xl font-mono text-gray-400 line-through">{myOldCoins}</span>
-                    <span className="text-4xl">→</span>
-                    <span className={`text-5xl font-black ${gained ? "text-green-400" : "text-red-400"}`}>
+                    <span className="text-2xl font-mono text-gray-400 line-through">{myOldCoins}</span>
+                    <span className="text-3xl">→</span>
+                    <span className={`text-4xl font-black ${gained ? "text-emerald-600" : "text-red-500"}`}>
                       {myNewCoins}
                     </span>
                   </div>
-                  <p className={`text-2xl font-bold mt-2 ${gained ? "text-green-300" : "text-red-300"}`}>
+                  <p className={`text-xl font-bold mt-2 ${gained ? "text-emerald-600" : "text-red-500"}`}>
                     {gained ? "+" : "-"}{coinDiff} coins
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                <p className="text-xl text-gray-300">
-                  <span className="text-purple-400 font-bold">{data.player1Name}</span> and{" "}
-                  <span className="text-cyan-400 font-bold">{data.player2Name}</span>
+              <div className="space-y-4 mt-4">
+                <p className="text-lg text-gray-700 font-medium">
+                  <span className="text-purple-600 font-bold">{data.player1Name}</span> and{" "}
+                  <span className="text-purple-600 font-bold">{data.player2Name}</span>
                 </p>
-                <p className="text-lg text-gray-400">swapped their coins!</p>
+                <p className="text-gray-600">swapped their coins!</p>
                 
                 <div className="flex items-center justify-center gap-8 mt-4">
-                  <div className="text-center">
-                    <p className="text-white font-bold">{data.player1Name}</p>
-                    <p className="text-gray-400">{data.player1OldCoins} → <span className="text-yellow-400">{data.player1NewCoins}</span></p>
+                  <div className="text-center bg-amber-100 rounded-xl p-3 border-2 border-amber-300">
+                    <p className="font-bold text-gray-800">{data.player1Name}</p>
+                    <p className="text-amber-600 font-medium">{data.player1OldCoins} → <span className="font-bold">{data.player1NewCoins}</span></p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-white font-bold">{data.player2Name}</p>
-                    <p className="text-gray-400">{data.player2OldCoins} → <span className="text-yellow-400">{data.player2NewCoins}</span></p>
+                  <div className="text-center bg-amber-100 rounded-xl p-3 border-2 border-amber-300">
+                    <p className="font-bold text-gray-800">{data.player2Name}</p>
+                    <p className="text-amber-600 font-medium">{data.player2OldCoins} → <span className="font-bold">{data.player2NewCoins}</span></p>
                   </div>
                 </div>
               </div>
@@ -185,7 +175,7 @@ export function IdentityTheftModal({ data, myPlayerName, onDismiss }: IdentityTh
                 {[...Array(12)].map((_, i) => (
                   <div
                     key={i}
-                    className="absolute text-3xl animate-float-up"
+                    className="absolute text-2xl animate-float-up"
                     style={{
                       left: `${10 + (i * 7)}%`,
                       animationDelay: `${i * 0.1}s`,

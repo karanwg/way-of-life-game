@@ -12,69 +12,62 @@ export function Leaderboard({ players }: LeaderboardProps) {
     if (index === 0) return "🥇"
     if (index === 1) return "🥈"
     if (index === 2) return "🥉"
-    return `#${index + 1}`
+    return null
   }
 
   return (
-    <div className="bg-gradient-to-br from-indigo-950/80 to-purple-950/80 backdrop-blur-sm border border-purple-500/30 rounded-xl p-3 h-full flex flex-col">
+    <div className="bg-[#FAF8F0] border-4 border-amber-700/80 rounded-2xl h-full flex flex-col shadow-xl overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-purple-500/30">
-        <span className="text-xl">🏆</span>
-        <h2 className="font-bold text-white text-sm">Leaderboard</h2>
+      <div className="bg-gradient-to-r from-green-600 to-green-700 px-4 py-3">
+        <h2 className="font-bold text-white text-sm flex items-center gap-2">
+          <span className="text-lg">🏆</span>
+          <span>Leaderboard</span>
+        </h2>
       </div>
 
       {/* Player list */}
-      <div className="space-y-1.5 flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {players.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-4">
             <span className="text-3xl mb-2">👀</span>
-            <p className="text-xs text-purple-300">Waiting for players...</p>
+            <p className="text-xs text-amber-700">Waiting for players...</p>
           </div>
         ) : (
           players.map((player, index) => {
             const pawnColor = getPawnColor(index)
-            const isTop3 = index < 3
+            const medal = getMedalEmoji(index)
 
             return (
               <div
                 key={player.id}
                 className={`
-                  flex items-center gap-2 p-2 rounded-lg
-                  transition-all duration-300
-                  ${
-                    isTop3
-                      ? "bg-gradient-to-r from-yellow-500/20 via-amber-500/10 to-transparent border border-yellow-500/30"
-                      : "bg-white/5 hover:bg-white/10"
-                  }
+                  flex items-center gap-2 p-2.5 rounded-xl border-2
+                  ${index === 0 
+                    ? "bg-amber-50 border-amber-400" 
+                    : "bg-white border-amber-100"}
                 `}
               >
                 {/* Rank */}
-                <div className="flex-shrink-0 w-7 text-center">
-                  <span className={`text-sm ${isTop3 ? "" : "text-purple-400"}`}>{getMedalEmoji(index)}</span>
+                <div className="flex-shrink-0 w-6 text-center">
+                  {medal ? (
+                    <span className="text-sm">{medal}</span>
+                  ) : (
+                    <span className="text-xs text-amber-600 font-bold">#{index + 1}</span>
+                  )}
                 </div>
 
-                {/* Player color indicator */}
+                {/* Player color */}
                 <div
-                  className={`
-                    flex-shrink-0 w-4 h-4 rounded-full
-                    bg-gradient-to-br ${pawnColor.bg}
-                    shadow-sm
-                  `}
-                  style={{ boxShadow: `0 0 8px ${pawnColor.shadow}` }}
+                  className={`flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br ${pawnColor.bg} border-2 border-white shadow-sm`}
                 />
 
                 {/* Name */}
-                <span className="text-xs font-medium text-white truncate flex-1">{player.name}</span>
+                <span className="text-xs font-bold text-gray-800 truncate flex-1">{player.name}</span>
 
                 {/* Coins */}
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <span className="text-sm">🪙</span>
-                  <span
-                    className={`
-                    text-xs font-bold
-                    ${player.coins >= 0 ? "text-yellow-400" : "text-red-400"}
-                  `}
-                  >
+                  <span className={`text-xs font-bold ${player.coins >= 0 ? "text-amber-700" : "text-red-600"}`}>
                     {player.coins}
                   </span>
                 </div>
@@ -84,10 +77,10 @@ export function Leaderboard({ players }: LeaderboardProps) {
         )}
       </div>
 
-      {/* Footer stats */}
+      {/* Footer */}
       {players.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-purple-500/30 text-center">
-          <span className="text-[10px] text-purple-400">
+        <div className="px-4 py-2 border-t-2 border-amber-200 bg-amber-50">
+          <span className="text-[10px] text-amber-700 font-medium">
             {players.length} player{players.length !== 1 ? "s" : ""} in game
           </span>
         </div>

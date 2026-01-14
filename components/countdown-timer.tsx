@@ -12,7 +12,6 @@ export function CountdownTimer({ initialSeconds, onTimeExpired, isActive }: Coun
   const [timeLeft, setTimeLeft] = useState(initialSeconds)
   const onTimeExpiredRef = useRef(onTimeExpired)
 
-  // Keep callback ref updated
   useEffect(() => {
     onTimeExpiredRef.current = onTimeExpired
   }, [onTimeExpired])
@@ -27,7 +26,6 @@ export function CountdownTimer({ initialSeconds, onTimeExpired, isActive }: Coun
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval)
-          // Use setTimeout to avoid state update during render
           setTimeout(() => onTimeExpiredRef.current(), 0)
           return 0
         }
@@ -46,31 +44,29 @@ export function CountdownTimer({ initialSeconds, onTimeExpired, isActive }: Coun
   const strokeDashoffset = circumference - (percentage / 100) * circumference
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="relative w-16 h-16 flex items-center justify-center">
-        {/* Background circle */}
-        <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 64 64">
-          <circle cx="32" cy="32" r={radius} fill="none" stroke="rgba(139, 92, 246, 0.2)" strokeWidth="4" />
-          {/* Animated progress circle */}
-          <circle
-            cx="32"
-            cy="32"
-            r={radius}
-            fill="none"
-            stroke={isLow ? "#ef4444" : "#8b5cf6"}
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-1000 ease-linear"
-          />
-        </svg>
-        {/* Timer text */}
-        <span className={`relative text-lg font-bold ${isLow ? "text-red-500 animate-pulse" : "text-white"}`}>
-          {timeLeft}s
-        </span>
-      </div>
-      <p className={`text-xs font-medium ${isLow ? "text-red-400" : "text-purple-300"}`}>Time</p>
+    <div className="relative w-16 h-16 flex items-center justify-center bg-white rounded-full border-2 border-amber-200 shadow-sm">
+      {/* Background ring */}
+      <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r={radius} fill="none" stroke="#fef3c7" strokeWidth="4" />
+        {/* Progress ring */}
+        <circle
+          cx="32"
+          cy="32"
+          r={radius}
+          fill="none"
+          stroke={isLow ? "#ef4444" : "#22c55e"}
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          className="transition-all duration-1000 ease-linear"
+        />
+      </svg>
+      
+      {/* Timer text */}
+      <span className={`relative text-xl font-black ${isLow ? "text-red-500 animate-pulse" : "text-green-600"}`}>
+        {timeLeft}
+      </span>
     </div>
   )
 }

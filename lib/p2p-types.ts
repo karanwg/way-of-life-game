@@ -19,6 +19,7 @@ export interface TileEventData {
   tileName: string
   tileText: string
   coinsDelta: number
+  isGlobal?: boolean // If true, this event affects multiple players
 }
 
 // Heist prompt data - now includes heist type
@@ -98,6 +99,7 @@ export type HostToGuestMessage =
       type: "MOVE_RESULT"
       playerId: string
       dieRoll: number | null
+      dieRolls: number[] // Individual rolls (for "roll again on 6")
       lapBonus: { lapsCompleted: number; coinsAwarded: number } | null
       tileEvent: TileEventData | null
       allPlayers: Player[]

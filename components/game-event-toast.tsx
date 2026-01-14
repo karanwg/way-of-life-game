@@ -88,9 +88,9 @@ export function GameEventToast({
         return (
           <div className="flex items-center gap-2 text-sm">
             <span>💸</span>
-            <span className="text-gray-300">
-              <span className="text-red-400 font-semibold">{heistResult.thiefName}</span> stole{" "}
-              <span className="text-yellow-400 font-semibold">{heistResult.amountStolen}</span> coins from you
+            <span className="text-gray-700">
+              <span className="text-red-600 font-bold">{heistResult.thiefName}</span> stole{" "}
+              <span className="text-amber-600 font-bold">{heistResult.amountStolen} 🪙</span> from you
             </span>
           </div>
         )
@@ -100,9 +100,9 @@ export function GameEventToast({
         return (
           <div className="flex items-center gap-2 text-sm">
             <span>💰</span>
-            <span className="text-gray-300">
-              You stole <span className="text-green-400 font-semibold">{heistResult.amountStolen}</span> coins from{" "}
-              <span className="text-white font-semibold">{heistResult.victimName}</span>
+            <span className="text-gray-700">
+              You stole <span className="text-emerald-600 font-bold">{heistResult.amountStolen} 🪙</span> from{" "}
+              <span className="text-gray-800 font-bold">{heistResult.victimName}</span>
             </span>
           </div>
         )
@@ -114,7 +114,7 @@ export function GameEventToast({
         return (
           <div className="flex items-center gap-2 text-sm">
             <span>🚶</span>
-            <span className="text-gray-300">You skipped the scheme</span>
+            <span className="text-gray-700">You skipped the gamble</span>
           </div>
         )
       }
@@ -123,11 +123,11 @@ export function GameEventToast({
       return (
         <div className="flex items-center gap-2 text-sm">
           <span>{won ? "🎉" : "💸"}</span>
-          <span className="text-gray-300">
-            {won ? "Jackpot! " : "Scheme collapsed! "}
-            <span className={won ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
-              {won ? "+" : ""}{ponziResult.coinsChange}
-            </span> coins
+          <span className="text-gray-700">
+            {won ? "Jackpot! " : "Bad luck! "}
+            <span className={won ? "text-emerald-600 font-bold" : "text-red-600 font-bold"}>
+              {won ? "+" : ""}{ponziResult.coinsChange} 🪙
+            </span>
           </span>
         </div>
       )
@@ -141,9 +141,9 @@ export function GameEventToast({
         return (
           <div className="flex items-center gap-2 text-sm">
             <span>🚔</span>
-            <span className="text-gray-300">
-              <span className="text-blue-400 font-semibold">{policeResult.snitchName}</span> snitched on you!{" "}
-              <span className="text-red-400 font-semibold">-{policeResult.coinsLost}</span> coins
+            <span className="text-gray-700">
+              <span className="text-sky-600 font-bold">{policeResult.snitchName}</span> reported you!{" "}
+              <span className="text-red-600 font-bold">-{policeResult.coinsLost} 🪙</span>
             </span>
           </div>
         )
@@ -153,8 +153,8 @@ export function GameEventToast({
         return (
           <div className="flex items-center gap-2 text-sm">
             <span>🚔</span>
-            <span className="text-gray-300">
-              You reported <span className="text-white font-semibold">{policeResult.victimName}</span>
+            <span className="text-gray-700">
+              You reported <span className="text-gray-800 font-bold">{policeResult.victimName}</span>
             </span>
           </div>
         )
@@ -176,9 +176,9 @@ export function GameEventToast({
       return (
         <div className="flex items-center gap-2 text-sm">
           <span>🎭</span>
-          <span className="text-gray-300">
-            Identity theft! Swapped coins with <span className="text-purple-400 font-semibold">{otherPlayer}</span>{" "}
-            <span className={gained ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
+          <span className="text-gray-700">
+            Swapped coins with <span className="text-purple-600 font-bold">{otherPlayer}</span>{" "}
+            <span className={gained ? "text-emerald-600 font-bold" : "text-red-600 font-bold"}>
               ({myOldCoins} → {myNewCoins})
             </span>
           </span>
@@ -197,7 +197,7 @@ export function GameEventToast({
         ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
       `}
     >
-      <div className="px-4 py-2 rounded-lg bg-gray-900/90 border border-gray-700/50 shadow-lg backdrop-blur-sm">
+      <div className="px-4 py-2 rounded-xl bg-white/95 border-2 border-amber-300 shadow-card backdrop-blur-sm">
         {renderContent()}
       </div>
     </div>

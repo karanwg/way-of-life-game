@@ -15,9 +15,9 @@ export function DiceRoller({ value, isRolling, onRollComplete }: DiceRollerProps
   useEffect(() => {
     if (isRolling) {
       setShowResult(false)
-      // Animate through random values
+      // Animate through random values (d6)
       const interval = setInterval(() => {
-        setDisplayValue(Math.floor(Math.random() * 4) + 1)
+        setDisplayValue(Math.floor(Math.random() * 6) + 1)
       }, 80)
 
       // Stop after animation
@@ -40,45 +40,80 @@ export function DiceRoller({ value, isRolling, onRollComplete }: DiceRollerProps
     }
   }, [isRolling, value, onRollComplete])
 
-  // Render dice face with dots (d4 style)
+  // Render dice face with dots (d6 style)
   const renderDiceFace = (num: number) => {
-    // Container is 56x56px (64 - 8px padding), we use a grid approach
+    const dotSize = "w-3 h-3"
+    const dotClass = `${dotSize} bg-gray-800 rounded-full shadow-md`
+    
     const dotLayouts: Record<number, React.ReactNode> = {
       1: (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-3 h-3 bg-white rounded-full shadow-lg" />
+          <div className={`w-4 h-4 bg-gray-800 rounded-full shadow-lg`} />
         </div>
       ),
       2: (
-        <div className="absolute inset-0 flex flex-col justify-between p-3">
+        <div className="absolute inset-0 flex flex-col justify-between p-2.5">
           <div className="flex justify-start">
-            <div className="w-3 h-3 bg-white rounded-full shadow-lg" />
+            <div className={dotClass} />
           </div>
           <div className="flex justify-end">
-            <div className="w-3 h-3 bg-white rounded-full shadow-lg" />
+            <div className={dotClass} />
           </div>
         </div>
       ),
       3: (
-        <div className="absolute inset-0 flex flex-col justify-between p-3">
-          <div className="flex justify-center">
-            <div className="w-3 h-3 bg-white rounded-full shadow-lg" />
+        <div className="absolute inset-0 flex flex-col justify-between p-2.5">
+          <div className="flex justify-start">
+            <div className={dotClass} />
           </div>
-          <div className="flex justify-between">
-            <div className="w-3 h-3 bg-white rounded-full shadow-lg" />
-            <div className="w-3 h-3 bg-white rounded-full shadow-lg" />
+          <div className="flex justify-center">
+            <div className={dotClass} />
+          </div>
+          <div className="flex justify-end">
+            <div className={dotClass} />
           </div>
         </div>
       ),
       4: (
-        <div className="absolute inset-0 flex flex-col justify-between p-3">
+        <div className="absolute inset-0 flex flex-col justify-between p-2.5">
           <div className="flex justify-between">
-            <div className="w-3 h-3 bg-white rounded-full shadow-lg" />
-            <div className="w-3 h-3 bg-white rounded-full shadow-lg" />
+            <div className={dotClass} />
+            <div className={dotClass} />
           </div>
           <div className="flex justify-between">
-            <div className="w-3 h-3 bg-white rounded-full shadow-lg" />
-            <div className="w-3 h-3 bg-white rounded-full shadow-lg" />
+            <div className={dotClass} />
+            <div className={dotClass} />
+          </div>
+        </div>
+      ),
+      5: (
+        <div className="absolute inset-0 flex flex-col justify-between p-2.5">
+          <div className="flex justify-between">
+            <div className={dotClass} />
+            <div className={dotClass} />
+          </div>
+          <div className="flex justify-center">
+            <div className={dotClass} />
+          </div>
+          <div className="flex justify-between">
+            <div className={dotClass} />
+            <div className={dotClass} />
+          </div>
+        </div>
+      ),
+      6: (
+        <div className="absolute inset-0 flex flex-col justify-between p-2.5">
+          <div className="flex justify-between">
+            <div className={dotClass} />
+            <div className={dotClass} />
+          </div>
+          <div className="flex justify-between">
+            <div className={dotClass} />
+            <div className={dotClass} />
+          </div>
+          <div className="flex justify-between">
+            <div className={dotClass} />
+            <div className={dotClass} />
           </div>
         </div>
       ),
@@ -91,9 +126,9 @@ export function DiceRoller({ value, isRolling, onRollComplete }: DiceRollerProps
     <div className="flex flex-col items-center gap-2">
       <div
         className={`
-          relative w-16 h-16 rounded-xl p-1
-          bg-gradient-to-br from-purple-500 via-pink-500 to-red-500
-          shadow-[0_0_30px_rgba(168,85,247,0.5)]
+          relative w-20 h-20 rounded-xl
+          bg-white border-4 border-red-500
+          shadow-playful
           ${isRolling ? "animate-dice-roll" : ""}
         `}
         style={isRolling ? {
@@ -102,7 +137,7 @@ export function DiceRoller({ value, isRolling, onRollComplete }: DiceRollerProps
         } : undefined}
       >
         {/* Inner dice face */}
-        <div className="relative w-full h-full bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg">
+        <div className="relative w-full h-full bg-white rounded-lg">
           {renderDiceFace(displayValue)}
         </div>
 
@@ -110,19 +145,19 @@ export function DiceRoller({ value, isRolling, onRollComplete }: DiceRollerProps
         {showResult && (
           <>
             <div
-              className="absolute -top-2 -left-2 w-4 h-4 text-yellow-400 animate-sparkle"
+              className="absolute -top-2 -left-2 w-4 h-4 text-amber-400 animate-sparkle"
               style={{ animationDelay: "0ms" }}
             >
               ✦
             </div>
             <div
-              className="absolute -top-1 -right-2 w-4 h-4 text-yellow-400 animate-sparkle"
+              className="absolute -top-1 -right-2 w-4 h-4 text-amber-400 animate-sparkle"
               style={{ animationDelay: "100ms" }}
             >
               ✦
             </div>
             <div
-              className="absolute -bottom-2 left-1/2 w-4 h-4 text-yellow-400 animate-sparkle"
+              className="absolute -bottom-2 left-1/2 w-4 h-4 text-amber-400 animate-sparkle"
               style={{ animationDelay: "200ms" }}
             >
               ✦
@@ -133,7 +168,7 @@ export function DiceRoller({ value, isRolling, onRollComplete }: DiceRollerProps
 
       {/* Roll result text */}
       {showResult && value !== null && (
-        <div className="text-lg font-bold text-accent animate-bounce-in">Rolled {value}!</div>
+        <div className="text-xl font-black text-emerald-600 animate-bounce-in">Rolled {value}!</div>
       )}
     </div>
   )

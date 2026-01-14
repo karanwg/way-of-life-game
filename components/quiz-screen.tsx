@@ -10,20 +10,16 @@ import type { EventCardData } from "./event-card"
 interface QuizScreenProps {
   player: Player
   onAnswer: (questionIndex: number, answerIndex: number) => Promise<void>
-  onNextQuestion: (wasCorrect: boolean) => Promise<{ dieRoll: number | null; tileEvent: EventCardData | null }>
-  onDiceRoll?: (dieRoll: number | null, isRolling: boolean) => void
+  onNextQuestion: (wasCorrect: boolean) => Promise<{ dieRoll: number | null; dieRolls?: number[]; tileEvent: EventCardData | null }>
+  onDiceRoll?: (dieRoll: number | null, isRolling: boolean, dieRolls?: number[]) => void
   onSessionExpired?: () => void
-  /** Whether the quiz is currently active (visible and no modals blocking). Timer only runs when true. */
   isActive?: boolean
 }
 
 export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSessionExpired, isActive = true }: QuizScreenProps) {
   const [isAnswering, setIsAnswering] = useState(false)
-  const [feedback, setFeedback] = useState<{
-    correct: boolean
-    message: string
-  } | null>(null)
-  const [timerActive, setTimerActive] = useState(false) // Start paused, activate when isActive
+  const [feedback, setFeedback] = useState<{ correct: boolean; message: string } | null>(null)
+  const [timerActive, setTimerActive] = useState(false)
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const feedbackRef = useRef<NodeJS.Timeout | null>(null)
@@ -32,7 +28,6 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
   const currentQuestion = QUESTIONS[player.currentQuestionIndex]
   const isQuizComplete = player.currentQuestionIndex >= QUESTIONS.length
 
-  // Activate timer when quiz becomes active (and not showing feedback)
   useEffect(() => {
     if (isActive && !feedback && !isLocked) {
       setTimerActive(true)
@@ -45,61 +40,33 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
     setTimerActive(false)
     setLastAnswerCorrect(false)
     playLoseMoneySound()
-    setFeedback({
-      correct: false,
-      message: "Time expired! -50 coins",
-    })
+    setFeedback({ correct: false, message: "Time expired! -50 coins" })
   }, [])
 
   useEffect(() => {
     if (!feedback) return
-
-    const delay = feedback.correct ? 1500 : 5000
-
-    if (!feedback.correct) {
-      setIsLocked(true)
-    }
-
-    feedbackRef.current = setTimeout(() => {
-      handleNextQuestion(feedback.correct)
-    }, delay)
-
-    return () => {
-      if (feedbackRef.current) clearTimeout(feedbackRef.current)
-    }
+    const delay = feedback.correct ? 1500 : 2000
+    if (!feedback.correct) setIsLocked(true)
+    feedbackRef.current = setTimeout(() => handleNextQuestion(feedback.correct), delay)
+    return () => { if (feedbackRef.current) clearTimeout(feedbackRef.current) }
   }, [feedback])
 
   const handleSelectAnswer = async (answerIndex: number) => {
     if (isAnswering || !timerActive || player.answered || feedback !== null) return
-
     setIsAnswering(true)
     setTimerActive(false)
 
     try {
-      // Check answer correctness locally
       const question = QUESTIONS[player.currentQuestionIndex]
       const correct = question ? answerIndex === question.correctAnswerIndex : false
-
-      // Submit answer via P2P
       await onAnswer(player.currentQuestionIndex, answerIndex)
-
-      // Play sound effect only for wrong answers (cha-ching is for chance-based gains only)
-      if (!correct) {
-        playLoseMoneySound()
-      }
-
+      if (!correct) playLoseMoneySound()
       setLastAnswerCorrect(correct)
-      setFeedback({
-        correct,
-        message: correct ? `Correct! +100 coins` : `Wrong! -50 coins`,
-      })
+      setFeedback({ correct, message: correct ? `Correct! +100 coins` : `Wrong! -50 coins` })
     } catch (error) {
       console.error("Error submitting answer:", error)
       setLastAnswerCorrect(false)
-      setFeedback({
-        correct: false,
-        message: "Error submitting answer. Please refresh.",
-      })
+      setFeedback({ correct: false, message: "Error submitting answer." })
       onSessionExpired?.()
     } finally {
       setIsAnswering(false)
@@ -112,32 +79,20 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
 
     try {
       const result = await onNextQuestion(wasCorrect)
-
-      // Only show dice animation if we actually got a die roll
       if (wasCorrect && result.dieRoll !== null) {
-        // Notify parent to show dice on board
-        onDiceRoll?.(result.dieRoll, true)
-
-        // Wait for dice animation to complete
+        onDiceRoll?.(result.dieRoll, true, result.dieRolls)
         setTimeout(() => {
-          onDiceRoll?.(result.dieRoll, false)
-
-          setTimeout(() => {
-            onDiceRoll?.(null, false)
-            setFeedback(null)
-            setTimerActive(true)
-            setIsLocked(false)
-          }, 1000)
+          onDiceRoll?.(result.dieRoll, false, result.dieRolls)
+          setTimeout(() => { onDiceRoll?.(null, false); setFeedback(null); setTimerActive(true); setIsLocked(false) }, 1000)
         }, 700)
       } else {
-        // No dice roll (wrong answer or skipped due to debuff)
         onDiceRoll?.(null, false)
         setFeedback(null)
         setTimerActive(true)
         setIsLocked(false)
       }
     } catch (error) {
-      console.error("Error advancing to next question:", error)
+      console.error("Error advancing:", error)
       onDiceRoll?.(null, false)
       setIsLocked(false)
     }
@@ -146,11 +101,11 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
   if (isQuizComplete) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <div className="text-center space-y-2">
-          <span className="text-4xl">🎉</span>
-          <h1 className="text-2xl font-bold text-white">Quiz Complete!</h1>
-          <p className="text-lg text-purple-300">
-            Final Score: <span className="text-yellow-400 font-bold">{player.coins}</span> coins
+        <div className="text-center">
+          <span className="text-6xl mb-4 block">🎉</span>
+          <h1 className="text-3xl font-black text-green-700 mb-2">Quiz Complete!</h1>
+          <p className="text-xl text-gray-700">
+            Final Score: <span className="text-amber-600 font-black">{player.coins}</span> coins
           </p>
         </div>
       </div>
@@ -160,44 +115,43 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
   if (!currentQuestion) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-purple-300">Loading question...</p>
+        <p className="text-gray-600">Loading question...</p>
       </div>
     )
   }
 
-  const buttonColors = [
-    "from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 border-red-400",
-    "from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 border-blue-400",
-    "from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 border-yellow-400",
-    "from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border-green-400",
+  // Monopoly-inspired button colors
+  const buttonStyles = [
+    "from-red-500 to-red-600 border-red-700 shadow-red-500/30",
+    "from-sky-500 to-sky-600 border-sky-700 shadow-sky-500/30",
+    "from-amber-500 to-amber-600 border-amber-700 shadow-amber-500/30",
+    "from-green-500 to-green-600 border-green-700 shadow-green-500/30",
   ]
 
   return (
-    <div className="flex flex-col h-full gap-2 relative">
+    <div className="flex flex-col h-full gap-4">
+      {/* Progress header */}
+      <div className="flex items-center justify-between">
+        <span className="text-amber-800 text-sm font-semibold">
+          Question {player.currentQuestionIndex + 1} / {QUESTIONS.length}
+        </span>
+        <span className="text-amber-700 font-bold flex items-center gap-1 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
+          🪙 {player.coins}
+        </span>
+      </div>
+      
       {/* Progress bar */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-purple-300">
-            Question {player.currentQuestionIndex + 1} of {QUESTIONS.length}
-          </span>
-          <span className="text-xs font-bold text-yellow-400 flex items-center gap-1">
-            <span>🪙</span> {player.coins}
-          </span>
-        </div>
-        <div className="w-full bg-purple-900/50 rounded-full h-1.5">
-          <div
-            className="h-full bg-gradient-to-r from-pink-500 to-cyan-500 rounded-full transition-all duration-300"
-            style={{
-              width: `${((player.currentQuestionIndex + 1) / QUESTIONS.length) * 100}%`,
-            }}
-          />
-        </div>
+      <div className="w-full bg-amber-100 rounded-full h-2 border border-amber-200">
+        <div
+          className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all duration-500"
+          style={{ width: `${((player.currentQuestionIndex + 1) / QUESTIONS.length) * 100}%` }}
+        />
       </div>
 
-      {/* Question and Timer row */}
-      <div className="flex gap-3 items-start">
+      {/* Question + Timer */}
+      <div className="flex gap-4 items-start bg-white rounded-xl p-5 border-2 border-amber-200 shadow-sm">
         <div className="flex-1">
-          <h2 className="text-base font-bold text-white text-pretty leading-snug">{currentQuestion.question}</h2>
+          <h2 className="text-xl font-bold text-gray-800 leading-relaxed">{currentQuestion.question}</h2>
         </div>
         <div className="flex-shrink-0">
           <CountdownTimer
@@ -208,27 +162,29 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
         </div>
       </div>
 
-      {/* Answer buttons - 2x2 grid */}
-      <div className="grid grid-cols-2 gap-2 flex-1">
+      {/* Answer buttons */}
+      <div className="grid grid-cols-2 gap-3 flex-1">
         {currentQuestion.options.map((option, index) => (
           <button
             key={index}
             onClick={() => handleSelectAnswer(index)}
             disabled={isAnswering || !timerActive || player.answered || feedback !== null || isLocked}
             className={`
-              relative rounded-xl border-2 p-2
-              bg-gradient-to-br ${buttonColors[index]}
-              text-white font-medium text-sm text-left
-              transition-all duration-200
-              hover:scale-[1.02] hover:shadow-lg
-              disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-              flex items-start gap-2
+              relative rounded-xl p-4
+              bg-gradient-to-b ${buttonStyles[index]}
+              text-white font-bold text-left
+              transition-all duration-200 shadow-lg
+              border-b-4
+              hover:-translate-y-0.5 hover:shadow-xl
+              active:translate-y-0 active:border-b-2
+              disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0
+              flex items-start gap-3
             `}
           >
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20 font-bold flex-shrink-0 text-xs">
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/20 font-black flex-shrink-0">
               {String.fromCharCode(65 + index)}
             </span>
-            <span className="flex-1 line-clamp-3">{option}</span>
+            <span className="flex-1 text-sm leading-snug">{option}</span>
           </button>
         ))}
       </div>
@@ -237,18 +193,16 @@ export function QuizScreen({ player, onAnswer, onNextQuestion, onDiceRoll, onSes
       {feedback && (
         <div
           className={`
-            p-2 rounded-xl text-center text-sm font-bold
-            animate-bounce-in
-            ${
-              feedback.correct
-                ? "bg-green-500/20 border-2 border-green-500/50 text-green-400"
-                : "bg-red-500/20 border-2 border-red-500/50 text-red-400"
+            p-4 rounded-xl text-center font-bold border-2 shadow-sm
+            ${feedback.correct
+              ? "bg-green-50 border-green-400 text-green-700"
+              : "bg-red-50 border-red-400 text-red-700"
             }
           `}
         >
           <span className="mr-2">{feedback.correct ? "✅" : "❌"}</span>
           {feedback.message}
-          {!feedback.correct && isLocked && <span className="ml-2 text-red-300 text-xs">(locked for 5s)</span>}
+          {!feedback.correct && isLocked && <span className="ml-2 opacity-60 text-xs">(locked for 2s)</span>}
         </div>
       )}
     </div>

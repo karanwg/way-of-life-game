@@ -26,11 +26,13 @@ export function PlayerPawn({ player, playerIndex, isCurrentPlayer, isMoving, siz
   const colorIndex = playerIndex % PAWN_COLORS.length
   const color = PAWN_COLORS[colorIndex]
 
-  const sizeClasses = {
-    sm: "w-6 h-8",
-    md: "w-8 h-10",
-    lg: "w-10 h-12",
+  const sizeConfig = {
+    sm: { container: "w-6 h-8", head: "w-3 h-3", neck: "w-1.5 h-1.5 top-2.5", body: "w-4 h-4", base: "w-5 h-1", label: "text-[6px] px-1 max-w-[40px]" },
+    md: { container: "w-8 h-10", head: "w-4 h-4", neck: "w-2 h-2 top-3.5", body: "w-5 h-5", base: "w-6 h-1.5", label: "text-[8px] px-1.5 max-w-[50px]" },
+    lg: { container: "w-12 h-14", head: "w-5 h-5", neck: "w-2.5 h-2.5 top-4", body: "w-7 h-7", base: "w-8 h-2", label: "text-[10px] px-2 max-w-[70px]" },
   }
+  
+  const cfg = sizeConfig[size]
 
   return (
     <div
@@ -44,14 +46,14 @@ export function PlayerPawn({ player, playerIndex, isCurrentPlayer, isMoving, siz
       {/* Pawn body - chess piece style */}
       <div
         className={`
-          ${sizeClasses[size]}
+          ${cfg.container}
           relative flex items-end justify-center
         `}
       >
         {/* Pawn head */}
         <div
           className={`
-            absolute top-0 w-4 h-4 rounded-full
+            absolute top-0 ${cfg.head} rounded-full
             bg-gradient-to-br ${color.bg}
             ${isCurrentPlayer ? "ring-2 ring-white ring-offset-1 ring-offset-transparent" : ""}
           `}
@@ -63,7 +65,7 @@ export function PlayerPawn({ player, playerIndex, isCurrentPlayer, isMoving, siz
         {/* Pawn neck */}
         <div
           className={`
-            absolute top-3.5 w-2 h-2
+            absolute ${cfg.neck}
             bg-gradient-to-br ${color.bg}
           `}
         />
@@ -71,7 +73,7 @@ export function PlayerPawn({ player, playerIndex, isCurrentPlayer, isMoving, siz
         {/* Pawn body cone */}
         <div
           className={`
-            w-5 h-5 rounded-b-full
+            ${cfg.body} rounded-b-full
             bg-gradient-to-br ${color.bg}
           `}
           style={{
@@ -83,7 +85,7 @@ export function PlayerPawn({ player, playerIndex, isCurrentPlayer, isMoving, siz
         {/* Pawn base */}
         <div
           className={`
-            absolute -bottom-0.5 w-6 h-1.5 rounded-full
+            absolute -bottom-0.5 ${cfg.base} rounded-full
             bg-gradient-to-br ${color.bg}
           `}
           style={{
@@ -95,10 +97,10 @@ export function PlayerPawn({ player, playerIndex, isCurrentPlayer, isMoving, siz
       {/* Player name label */}
       <div
         className={`
-          mt-0.5 px-1.5 py-0.5 rounded text-[8px] font-bold
-          bg-black/60 text-white whitespace-nowrap
-          max-w-[50px] truncate
-          ${isCurrentPlayer ? "ring-1 ring-accent" : ""}
+          mt-1 py-0.5 rounded-md font-bold
+          bg-white text-gray-800 whitespace-nowrap shadow-md border border-gray-300
+          truncate ${cfg.label}
+          ${isCurrentPlayer ? "ring-2 ring-amber-400" : ""}
         `}
       >
         {player.name}

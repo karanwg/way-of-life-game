@@ -54,22 +54,22 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gradient-to-br from-gray-900 to-slate-900 border-2 border-red-500/50 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-bounce-in">
+    <div className="fixed inset-0 bg-emerald-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white border-4 border-orange-400 rounded-2xl p-6 max-w-md w-full shadow-playful animate-bounce-in">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="text-4xl mb-2">{getHeistEmoji()}</div>
-          <h2 className="text-2xl font-bold text-red-400">
-            {getHeistTitle()}
+          <div className="text-5xl mb-2 animate-wiggle">{getHeistEmoji()}</div>
+          <h2 className="text-2xl font-black text-orange-600">
+            {getHeistTitle()}!
           </h2>
-          <p className="text-gray-400 mt-2">
+          <p className="text-amber-700 mt-2 font-medium">
             {getHeistDescription()}
           </p>
         </div>
 
         {/* Target Selection */}
         <div className="space-y-2 mb-6">
-          <p className="text-sm text-gray-300 mb-3">Select your target:</p>
+          <p className="text-sm text-gray-600 mb-3 font-medium">🎯 Pick your target:</p>
           {data.availableTargets.map((target) => {
             const isSelected = selectedTarget === target.id
             const stealAmount = calculateStealAmount(target.coins)
@@ -79,32 +79,32 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
                 key={target.id}
                 onClick={() => setSelectedTarget(target.id)}
                 className={`
-                  w-full p-4 rounded-xl border-2 transition-all
+                  w-full p-4 rounded-xl border-3 transition-all
                   flex items-center justify-between
                   ${
                     isSelected
-                      ? "border-red-500 bg-red-500/20"
-                      : "border-gray-600 bg-gray-800/50 hover:border-gray-500"
+                      ? "border-orange-500 bg-orange-100 shadow-playful"
+                      : "border-amber-200 bg-amber-50 hover:border-orange-300 hover:bg-orange-50"
                   }
                 `}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-500 to-gray-700 flex items-center justify-center text-lg">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-300 to-amber-400 flex items-center justify-center text-lg shadow-sm">
                     👤
                   </div>
                   <div className="text-left">
-                    <div className="font-semibold text-white">{target.name}</div>
-                    <div className="text-sm text-gray-400">
-                      {target.coins} coins
+                    <div className="font-bold text-gray-800">{target.name}</div>
+                    <div className="text-sm text-amber-600 font-medium">
+                      🪙 {target.coins}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-red-400 font-bold">
+                  <div className="text-orange-600 font-black text-lg">
                     +{stealAmount} 🪙
                   </div>
                   {isSelected && (
-                    <div className="text-xs text-green-400">Selected</div>
+                    <div className="text-xs text-emerald-600 font-bold">✓ Selected</div>
                   )}
                 </div>
               </button>
@@ -117,15 +117,15 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
           onClick={handleConfirm}
           disabled={!selectedTarget}
           className={`
-            w-full py-3 rounded-xl font-bold text-lg transition-all
+            w-full py-3 rounded-xl font-black text-lg transition-all border-2
             ${
               selectedTarget
-                ? "bg-gradient-to-r from-red-600 to-orange-600 text-white hover:from-red-500 hover:to-orange-500"
-                : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                ? "bg-orange-500 border-orange-600 text-white hover:bg-orange-600 shadow-playful hover:-translate-y-0.5"
+                : "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
             }
           `}
         >
-          {selectedTarget ? "Execute Heist 🎯" : "Select a Target"}
+          {selectedTarget ? "Execute Heist! 🎯" : "Select a Target"}
         </button>
       </div>
     </div>

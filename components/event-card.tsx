@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { X, Coins, Zap, Shuffle, Briefcase } from "lucide-react"
+import { useEffect, useState, useRef } from "react"
+import { X } from "lucide-react"
 import { playChaChingSound, playLoseMoneySound } from "@/lib/sounds"
 
 export interface EventCardData {
@@ -17,251 +17,150 @@ interface EventCardProps {
   onDismiss: () => void
 }
 
-// Get icon and colors based on event type
-function getEventStyle(coinsDelta: number, tileName: string) {
-  // Heist tiles
-  if (tileName.includes("Heist") || tileName.includes("Pickpocket")) {
-    let emoji = "🎭"
-    if (tileName.includes("Grand")) emoji = "🔫"
-    if (tileName.includes("Pickpocket")) emoji = "🤏"
-    return {
-      icon: Zap,
-      bg: "from-red-600 to-orange-700",
-      border: "border-red-400",
-      iconBg: "bg-red-500",
-      emoji,
-    }
-  }
-  
-  // Ponzi scheme / Crypto Casino
-  if (tileName.includes("Ponzi") || tileName.includes("Crypto")) {
-    return {
-      icon: Shuffle,
-      bg: "from-purple-600 to-pink-700",
-      border: "border-purple-400",
-      iconBg: "bg-purple-500",
-      emoji: "🎰",
-    }
-  }
-  
-  // Police Station
-  if (tileName.includes("Police")) {
-    return {
-      icon: Briefcase,
-      bg: "from-blue-600 to-cyan-700",
-      border: "border-blue-400",
-      iconBg: "bg-blue-500",
-      emoji: "🚔",
-    }
-  }
-  
-  // Side hustle
-  if (tileName.includes("Side Hustle")) {
-    return {
-      icon: Zap,
-      bg: "from-red-600 to-rose-700",
-      border: "border-red-400",
-      iconBg: "bg-red-500",
-      emoji: "📺",
-    }
-  }
-  
-  // Home
-  if (tileName.includes("Home")) {
-    return {
-      icon: Zap,
-      bg: "from-emerald-600 to-green-700",
-      border: "border-emerald-400",
-      iconBg: "bg-emerald-500",
-      emoji: "🏠",
-    }
-  }
-
-  // Coin-based
-  if (coinsDelta > 0) {
-    return {
-      icon: Coins,
-      bg: "from-yellow-500 to-amber-600",
-      border: "border-yellow-300",
-      iconBg: "bg-yellow-500",
-      emoji: "💰",
-    }
-  }
-  if (coinsDelta < 0) {
-    return {
-      icon: Coins,
-      bg: "from-red-600 to-rose-700",
-      border: "border-red-400",
-      iconBg: "bg-red-500",
-      emoji: "💸",
-    }
-  }
-
-  // Neutral / safe tiles
-  return {
-    icon: Zap,
-    bg: "from-slate-600 to-gray-700",
-    border: "border-slate-400",
-    iconBg: "bg-slate-500",
-    emoji: "🌀",
-  }
+function getTileEmoji(tileName: string): string {
+  if (tileName.includes("GO")) return "🏠"
+  if (tileName.includes("Train") || tileName.includes("Station")) return "🚂"
+  if (tileName.includes("Bus")) return "🚌"
+  if (tileName.includes("Coffee")) return "☕"
+  if (tileName.includes("Bakery")) return "🥐"
+  if (tileName.includes("Flower")) return "🌸"
+  if (tileName.includes("Candy")) return "🍬"
+  if (tileName.includes("Ice Cream")) return "🍦"
+  if (tileName.includes("Lemonade")) return "🍋"
+  if (tileName.includes("Yard")) return "🏷️"
+  if (tileName.includes("Thrift")) return "👕"
+  if (tileName.includes("Tax")) return "💰"
+  if (tileName.includes("Parking")) return "🅿️"
+  if (tileName.includes("Visiting")) return "👀"
+  if (tileName.includes("Community")) return "📦"
+  if (tileName.includes("Chance") || tileName.includes("Casino")) return "🎰"
+  if (tileName.includes("Heist") || tileName.includes("Pickpocket")) return "🎭"
+  if (tileName.includes("Police")) return "🚔"
+  return "🎲"
 }
 
 export function EventCard({ event, onDismiss }: EventCardProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [showCoins, setShowCoins] = useState(false)
+  const onDismissRef = useRef(onDismiss)
+  const eventIdRef = useRef<string | null>(null)
+
+  // Keep the ref updated
+  useEffect(() => {
+    onDismissRef.current = onDismiss
+  }, [onDismiss])
 
   useEffect(() => {
     if (event) {
+      // Create a unique ID for this event to prevent re-triggering
+      const eventId = `${event.tileName}-${event.coinsDelta}-${Date.now()}`
+      
+      // If this is the same event instance, don't re-run
+      if (eventIdRef.current === eventId) return
+      eventIdRef.current = eventId
+
       setIsVisible(true)
       setShowCoins(false)
 
-      // Play sound based on coin change
-      if (event.coinsDelta > 0) {
-        playChaChingSound()
-      } else if (event.coinsDelta < 0) {
-        playLoseMoneySound()
-      }
+      if (event.coinsDelta > 0) playChaChingSound()
+      else if (event.coinsDelta < 0) playLoseMoneySound()
 
-      // Delay coin animation
       const coinTimer = setTimeout(() => setShowCoins(true), 300)
-
-      // Auto dismiss
       const dismissTimer = setTimeout(() => {
         setIsVisible(false)
-        setTimeout(onDismiss, 400)
-      }, 5000)
+        setTimeout(() => onDismissRef.current(), 400)
+      }, 4000)
 
       return () => {
         clearTimeout(coinTimer)
         clearTimeout(dismissTimer)
       }
+    } else {
+      eventIdRef.current = null
     }
-  }, [event, onDismiss])
+  }, [event])
 
   if (!event) return null
 
-  const style = getEventStyle(event.coinsDelta, event.tileName)
-  const Icon = style.icon
-  const isDelta = event.coinsDelta !== 0
+  const emoji = getTileEmoji(event.tileName)
   const isPositive = event.coinsDelta > 0
+  const isNegative = event.coinsDelta < 0
 
   return (
     <div
       className={`
-      fixed inset-0 flex items-center justify-center pointer-events-none z-50
-      transition-all duration-400
-      ${isVisible ? "opacity-100" : "opacity-0"}
-    `}
-    >
-      {/* Backdrop blur */}
-      <div
-        className={`
-        absolute inset-0 bg-black/40 backdrop-blur-sm
-        transition-opacity duration-300
+        fixed inset-0 flex items-center justify-center pointer-events-none z-50
+        transition-all duration-400
         ${isVisible ? "opacity-100" : "opacity-0"}
       `}
-      />
+    >
+      {/* Backdrop */}
+      <div className={`absolute inset-0 bg-green-900/60 backdrop-blur-sm transition-opacity ${isVisible ? "opacity-100" : "opacity-0"}`} />
 
       {/* Card */}
       <div
         className={`
-          pointer-events-auto relative
-          w-[90%] max-w-md
-          rounded-2xl border-4 ${style.border}
-          bg-gradient-to-br ${style.bg}
-          shadow-2xl
+          pointer-events-auto relative w-[90%] max-w-sm
+          bg-[#FAF8F0] rounded-2xl border-4 border-amber-700/80 shadow-2xl
+          overflow-hidden
           transform transition-all duration-400 ease-out
           ${isVisible ? "scale-100 translate-y-0" : "scale-90 translate-y-8"}
         `}
       >
-        {/* Close button */}
-        <button
-          onClick={() => {
-            setIsVisible(false)
-            setTimeout(onDismiss, 300)
-          }}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center text-white/80 hover:text-white transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* Header band */}
+        <div className={`py-4 px-6 text-center relative ${
+          isPositive ? "bg-gradient-to-r from-green-600 to-green-700" :
+          isNegative ? "bg-gradient-to-r from-red-500 to-red-600" :
+          "bg-gradient-to-r from-amber-500 to-amber-600"
+        }`}>
+          <button
+            onClick={() => { setIsVisible(false); setTimeout(onDismiss, 300) }}
+            className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          
+          <span className="text-4xl block mb-1">{emoji}</span>
+          <h2 className="text-xl font-black text-white">{event.tileName}</h2>
+        </div>
 
-        {/* Content */}
-        <div className="p-6 pt-8">
-          {/* Icon */}
-          <div className="flex justify-center mb-4">
-            <div
-              className={`
-              w-20 h-20 rounded-full ${style.iconBg}
-              flex items-center justify-center
-              shadow-lg animate-bounce-in
-            `}
-            >
-              <span className="text-5xl">{style.emoji}</span>
-            </div>
-          </div>
-
-          {/* Tile name */}
-          <h2 className="text-2xl font-black text-white text-center mb-3 text-balance">{event.tileName}</h2>
-
-          {/* Flavor text */}
-          <p className="text-base text-white/80 italic text-center mb-4 leading-relaxed">"{event.tileText}"</p>
+        <div className="p-6 text-center">
+          {/* Description */}
+          <p className="text-gray-700 mb-5">{event.tileText}</p>
 
           {/* Coin effect */}
-          {isDelta && (
+          {event.coinsDelta !== 0 && (
             <div
               className={`
-              flex items-center justify-center gap-3 p-4 rounded-xl
-              ${isPositive ? "bg-yellow-500/20" : "bg-red-500/20"}
-              ${showCoins ? "animate-bounce-in" : "opacity-0"}
-            `}
-            >
-              <div
-                className={`
-                text-4xl font-black
-                ${isPositive ? "text-yellow-300" : "text-red-300"}
+                inline-flex items-center gap-2 px-5 py-3 rounded-xl border-2
+                ${isPositive 
+                  ? "bg-green-50 border-green-400" 
+                  : "bg-red-50 border-red-400"}
+                ${showCoins ? "animate-bounce-in" : "opacity-0"}
               `}
-              >
-                {isPositive ? "+" : ""}
-                {event.coinsDelta}
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-3xl animate-coin-spin">🪙</span>
-                <span className="text-lg font-bold text-white">coins</span>
-              </div>
-            </div>
-          )}
-
-          {/* Global effect indicator */}
-          {event.isGlobal && (
-            <div className="mt-4 text-center">
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white/90 text-sm font-medium">
-                <Zap className="w-4 h-4 text-yellow-400" />
-                Global Effect - Everyone Affected!
+            >
+              <span className="text-2xl">🪙</span>
+              <span className={`text-2xl font-black ${isPositive ? "text-green-600" : "text-red-600"}`}>
+                {isPositive ? "+" : ""}{event.coinsDelta}
               </span>
             </div>
           )}
 
-          {/* Player affected */}
+          {/* Global indicator */}
+          {event.isGlobal && (
+            <div className="mt-4">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold border border-amber-300">
+                ⚡ Everyone Affected
+              </span>
+            </div>
+          )}
+
+          {/* Triggered by */}
           {event.affectedPlayerName && (
-            <p className="mt-3 text-center text-white/70 text-sm">
-              Triggered by: <span className="font-bold text-white">{event.affectedPlayerName}</span>
+            <p className="mt-4 text-gray-500 text-sm">
+              Triggered by: <span className="text-gray-700 font-medium">{event.affectedPlayerName}</span>
             </p>
           )}
-        </div>
-
-        {/* Decorative sparkles */}
-        <div className="absolute top-4 left-6 text-2xl animate-sparkle" style={{ animationDelay: "0ms" }}>
-          ✨
-        </div>
-        <div className="absolute top-8 right-12 text-xl animate-sparkle" style={{ animationDelay: "200ms" }}>
-          ✨
-        </div>
-        <div className="absolute bottom-6 left-8 text-xl animate-sparkle" style={{ animationDelay: "400ms" }}>
-          ✨
-        </div>
-        <div className="absolute bottom-4 right-6 text-2xl animate-sparkle" style={{ animationDelay: "100ms" }}>
-          ✨
         </div>
       </div>
     </div>
