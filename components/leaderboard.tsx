@@ -1,3 +1,19 @@
+/**
+ * Leaderboard - Real-time player rankings display
+ * 
+ * Shows all players sorted by coin count (descending).
+ * Updates automatically as player state changes.
+ * 
+ * Players who disconnect are automatically removed from the list
+ * via the game engine's removePlayer method.
+ * 
+ * Features:
+ * - Medal emojis for top 3 positions
+ * - Player pawn color indicator
+ * - Coin count with visual styling for positive/negative
+ * - Scrollable list for many players
+ */
+
 "use client"
 
 import type { Player } from "@/lib/types"
@@ -7,14 +23,19 @@ interface LeaderboardProps {
   players: Player[]
 }
 
-export function Leaderboard({ players }: LeaderboardProps) {
-  const getMedalEmoji = (index: number) => {
-    if (index === 0) return "🥇"
-    if (index === 1) return "🥈"
-    if (index === 2) return "🥉"
-    return null
+/** Get medal emoji for top positions */
+function getMedalEmoji(index: number): string | null {
+  switch (index) {
+    case 0: return "🥇"
+    case 1: return "🥈"
+    case 2: return "🥉"
+    default: return null
   }
+}
 
+export function Leaderboard({ players }: LeaderboardProps) {
+  // Players are already sorted by coins (descending) from the game engine
+  
   return (
     <div className="bg-[#FAF8F0] border-4 border-amber-700/80 rounded-2xl h-full flex flex-col shadow-xl overflow-hidden">
       {/* Header */}
@@ -42,12 +63,13 @@ export function Leaderboard({ players }: LeaderboardProps) {
                 key={player.id}
                 className={`
                   flex items-center gap-2 p-2.5 rounded-xl border-2
+                  transition-all duration-300
                   ${index === 0 
                     ? "bg-amber-50 border-amber-400" 
                     : "bg-white border-amber-100"}
                 `}
               >
-                {/* Rank */}
+                {/* Rank indicator */}
                 <div className="flex-shrink-0 w-6 text-center">
                   {medal ? (
                     <span className="text-sm">{medal}</span>
@@ -56,15 +78,17 @@ export function Leaderboard({ players }: LeaderboardProps) {
                   )}
                 </div>
 
-                {/* Player color */}
+                {/* Player color indicator */}
                 <div
                   className={`flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br ${pawnColor.bg} border-2 border-white shadow-sm`}
                 />
 
-                {/* Name */}
-                <span className="text-xs font-bold text-gray-800 truncate flex-1">{player.name}</span>
+                {/* Player name */}
+                <span className="text-xs font-bold text-gray-800 truncate flex-1">
+                  {player.name}
+                </span>
 
-                {/* Coins */}
+                {/* Coin count */}
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <span className="text-sm">🪙</span>
                   <span className={`text-xs font-bold ${player.coins >= 0 ? "text-amber-700" : "text-red-600"}`}>
@@ -77,7 +101,7 @@ export function Leaderboard({ players }: LeaderboardProps) {
         )}
       </div>
 
-      {/* Footer */}
+      {/* Footer - player count */}
       {players.length > 0 && (
         <div className="px-4 py-2 border-t-2 border-amber-200 bg-amber-50">
           <span className="text-[10px] text-amber-700 font-medium">

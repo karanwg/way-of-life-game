@@ -1,3 +1,24 @@
+/**
+ * Board - 3D game board component
+ * 
+ * Renders a Monopoly-style board with 24 tiles arranged in a square.
+ * The board is rendered with 3D perspective (tilted view like Monopoly GO).
+ * 
+ * LAYOUT:
+ * - 4 corners (tiles 0, 6, 12, 18) - GO, Jail, Free Parking, Police
+ * - 5 tiles per side between corners
+ * - Players move clockwise starting from GO (tile 0)
+ * 
+ * BOARD ROTATION:
+ * - rotateX(55deg): Tilt the board away from viewer (isometric-ish view)
+ * - rotateZ(-45deg): Rotate 45 degrees for diamond orientation
+ * 
+ * CAMERA SYSTEM:
+ * - Follows the current player's position
+ * - Smooth transitions between positions
+ * - Uses the minimap in the corner for overview
+ */
+
 "use client"
 
 import { useEffect, useState, useRef } from "react"
@@ -10,12 +31,38 @@ interface BoardProps {
   currentPlayerId: string
 }
 
-// Board layout constants
-const CORNER_SIZE = 12 // % of board for corner tiles
-const EDGE_TILES = TILES_PER_SIDE - 1 // 5 regular tiles per side (excluding corner)
-const TILE_SIZE = (100 - 2 * CORNER_SIZE) / EDGE_TILES // Size of regular tiles
+// ============================================================================
+// LAYOUT CONSTANTS
+// ============================================================================
 
-// Get tile position and dimensions based on its location on the board
+/** Size of corner tiles as percentage of board */
+const CORNER_SIZE = 12
+
+/** Number of regular tiles per side (excluding corner) */
+const EDGE_TILES = TILES_PER_SIDE - 1 // 5 tiles
+
+/** Size of each regular tile as percentage of board */
+const TILE_SIZE = (100 - 2 * CORNER_SIZE) / EDGE_TILES
+
+// ============================================================================
+// LAYOUT HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Calculate tile position and dimensions based on its ID
+ * 
+ * Board layout (tile IDs):
+ *   18 17 16 15 14 13 12
+ *   19                11
+ *   20                10
+ *   21                 9
+ *   22                 8
+ *   23                 7
+ *    0  1  2  3  4  5  6
+ * 
+ * @param tileId - Tile ID (0-23)
+ * @returns Position and dimension data for the tile
+ */
 function getTileLayout(tileId: number): {
   left: number
   top: number
@@ -30,10 +77,11 @@ function getTileLayout(tileId: number): {
   let side: "bottom" | "right" | "top" | "left" = "bottom"
   let isCorner = false
 
-  // Bottom row (0-5)
+  // Bottom row (tiles 0-5)
   if (tileId >= 0 && tileId <= 5) {
     side = "bottom"
     if (tileId === 0) {
+      // Bottom-left corner (GO)
       left = 0
       top = 100 - CORNER_SIZE
       width = CORNER_SIZE
@@ -47,10 +95,11 @@ function getTileLayout(tileId: number): {
       height = CORNER_SIZE
     }
   }
-  // Right column (6-11)
+  // Right column (tiles 6-11)
   else if (tileId >= 6 && tileId <= 11) {
     side = "right"
     if (tileId === 6) {
+      // Bottom-right corner (Jail)
       left = 100 - CORNER_SIZE
       top = 100 - CORNER_SIZE
       width = CORNER_SIZE
@@ -64,10 +113,11 @@ function getTileLayout(tileId: number): {
       height = TILE_SIZE
     }
   }
-  // Top row (12-17)
+  // Top row (tiles 12-17)
   else if (tileId >= 12 && tileId <= 17) {
     side = "top"
     if (tileId === 12) {
+      // Top-right corner (Free Parking)
       left = 100 - CORNER_SIZE
       top = 0
       width = CORNER_SIZE
@@ -81,10 +131,11 @@ function getTileLayout(tileId: number): {
       height = CORNER_SIZE
     }
   }
-  // Left column (18-23)
+  // Left column (tiles 18-23)
   else {
     side = "left"
     if (tileId === 18) {
+      // Top-left corner (Police Station)
       left = 0
       top = 0
       width = CORNER_SIZE
@@ -111,71 +162,65 @@ function getTileLayout(tileId: number): {
   }
 }
 
+// ============================================================================
+// BOARD COMPONENT
+// ============================================================================
+
 export function Board({ players, currentPlayerId }: BoardProps) {
   const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 })
   const previousTileRef = useRef<number | null>(null)
-  
+
+  /** Get player's index in the players array (for color assignment) */
   const getPlayerIndex = (playerId: string) => {
     return players.findIndex((p) => p.id === playerId)
   }
 
-  // Get ONLY the current player's tile ID for camera (ignores other players completely)
+  // Get current player's tile for camera tracking
   const myCurrentTileId = players.find(p => p.id === currentPlayerId)?.currentTileId ?? 0
-  
-  // Calculate camera offset - focus on MY position only
+
+  // Calculate camera offset to follow current player
   useEffect(() => {
     const currentLayout = getTileLayout(myCurrentTileId)
     const prevTileId = previousTileRef.current
-    
+
     let focusX: number
     let focusY: number
-    
+
     if (prevTileId !== null && prevTileId !== myCurrentTileId) {
-      // Calculate midpoint between my previous and current tile
+      // Animate camera by focusing on midpoint during movement
       const prevLayout = getTileLayout(prevTileId)
       focusX = (prevLayout.centerX + currentLayout.centerX) / 2
       focusY = (prevLayout.centerY + currentLayout.centerY) / 2
     } else {
-      // Just focus on my current tile
+      // Just focus on current tile
       focusX = currentLayout.centerX
       focusY = currentLayout.centerY
     }
-    
-    // Update previous tile reference (only tracks MY movement)
+
     previousTileRef.current = myCurrentTileId
-    
+
     // Convert focus position to camera offset
-    // Player position is in board coordinates (0-100)
-    // We need to translate the board to center the player
-    // The board is rotated 45deg, so we need to account for that
-    
-    // Calculate offset needed to center the player
-    // Since board is rotated -45deg, X and Y movements are mixed:
-    // - Moving right on board = moving diagonally right-down on screen
-    // - Moving down on board = moving diagonally left-down on screen
-    
-    // Convert board coords to what feels like screen offset
-    // After -45deg rotation: screenX ≈ boardX - boardY, screenY ≈ boardX + boardY
+    // Account for the 45-degree rotation of the board
     const boardOffsetX = 50 - focusX
     const boardOffsetY = 50 - focusY
-    
-    // Account for rotation: rotate the offset by 45 degrees
+
+    // Rotate the offset to match board rotation
     const angle = Math.PI / 4 // 45 degrees
     const rotatedX = boardOffsetX * Math.cos(angle) + boardOffsetY * Math.sin(angle)
     const rotatedY = -boardOffsetX * Math.sin(angle) + boardOffsetY * Math.cos(angle)
-    
-    // Scale for the viewport (the board is 160vw, so we need proportional movement)
+
+    // Scale for the viewport
     const rawX = rotatedX * 1.2
-    const rawY = rotatedY * 0.6 // Less Y due to perspective squishing
-    
-    // Clamp to reasonable limits
+    const rawY = rotatedY * 0.6 // Less Y movement due to perspective
+
+    // Clamp to prevent seeing outside the board
     const maxOffsetX = 50
     const maxOffsetY = 30
     const clampedX = Math.max(-maxOffsetX, Math.min(maxOffsetX, rawX))
     const clampedY = Math.max(-maxOffsetY, Math.min(maxOffsetY, rawY))
-    
+
     setCameraOffset({ x: clampedX, y: clampedY })
-  }, [myCurrentTileId]) // Only depends on MY tile ID - ignores other players
+  }, [myCurrentTileId])
 
   return (
     <div className="w-full h-full flex items-center justify-center overflow-hidden rounded-xl bg-gradient-to-b from-sky-300 via-sky-200 to-emerald-200">
@@ -188,13 +233,13 @@ export function Board({ players, currentPlayerId }: BoardProps) {
         }}
       >
         {/* Camera movement wrapper */}
-        <div 
+        <div
           className="transition-transform duration-700 ease-out"
           style={{
             transform: `translateX(${cameraOffset.x}%) translateY(${cameraOffset.y}%)`,
           }}
         >
-          {/* Board with 3D tilt - Monopoly GO style isometric view */}
+          {/* Main board with 3D tilt */}
           <div
             className="relative bg-[#1b5e20] rounded-lg"
             style={{
@@ -206,7 +251,7 @@ export function Board({ players, currentPlayerId }: BoardProps) {
             }}
           >
             {/* Board edge/frame */}
-            <div 
+            <div
               className="absolute inset-0 rounded-lg"
               style={{
                 background: "linear-gradient(135deg, #5d4037 0%, #4e342e 50%, #3e2723 100%)",
@@ -214,16 +259,16 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                 boxShadow: "inset 0 0 20px rgba(0,0,0,0.5)",
               }}
             />
-            
+
             {/* Main board surface */}
-            <div 
+            <div
               className="absolute inset-0 bg-[#2e7d32] rounded-lg"
               style={{
                 boxShadow: "inset 0 0 30px rgba(0,0,0,0.2)",
                 overflow: "visible",
               }}
             >
-              {/* Inner board area (cream/beige like Monopoly) */}
+              {/* Inner board area (cream/beige center) */}
               <div
                 className="absolute overflow-hidden"
                 style={{
@@ -235,47 +280,34 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                   background: "linear-gradient(135deg, #c5e1a5 0%, #a5d6a7 50%, #81c784 100%)",
                 }}
               >
-                {/* Decorative circular path */}
-                <div 
+                {/* Decorative elements */}
+                <div
                   className="absolute rounded-full border-4 border-dashed border-[#4e342e]/30"
-                  style={{
-                    left: "15%",
-                    top: "15%",
-                    right: "15%",
-                    bottom: "15%",
-                  }}
+                  style={{ left: "15%", top: "15%", right: "15%", bottom: "15%" }}
                 />
-                <div 
+                <div
                   className="absolute rounded-full border-2 border-[#4e342e]/20"
-                  style={{
-                    left: "25%",
-                    top: "25%",
-                    right: "25%",
-                    bottom: "25%",
-                  }}
+                  style={{ left: "25%", top: "25%", right: "25%", bottom: "25%" }}
                 />
-                
+
                 {/* Corner decorations */}
                 <div className="absolute top-4 left-4 text-5xl opacity-70">🏠</div>
                 <div className="absolute top-4 right-4 text-5xl opacity-70">🎰</div>
                 <div className="absolute bottom-4 left-4 text-5xl opacity-70">💎</div>
                 <div className="absolute bottom-4 right-4 text-5xl opacity-70">🏦</div>
-                
-                {/* Decorative elements around the center */}
+
+                {/* Trees around edges */}
                 <div className="absolute top-10 left-1/2 -translate-x-1/2 text-4xl opacity-60">🌳</div>
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-4xl opacity-60">🌳</div>
                 <div className="absolute left-10 top-1/2 -translate-y-1/2 text-4xl opacity-60">🌴</div>
                 <div className="absolute right-10 top-1/2 -translate-y-1/2 text-4xl opacity-60">🌴</div>
-                
-                {/* Center piece - main logo area */}
-                <div 
+
+                {/* Center logo */}
+                <div
                   className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 
                              bg-white/90 rounded-2xl shadow-xl p-6 border-4 border-[#c62828]"
-                  style={{
-                    minWidth: "180px",
-                  }}
+                  style={{ minWidth: "180px" }}
                 >
-                  {/* Main logo */}
                   <div className="text-center">
                     <h1 className="text-3xl font-black text-[#c62828] tracking-wide drop-shadow-sm">
                       WAY OF
@@ -291,14 +323,14 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                     <p className="text-[#4e342e] text-xs mt-1 font-bold">Answer. Move. Prosper!</p>
                   </div>
                 </div>
-                
-                {/* Scattered coins decoration */}
+
+                {/* Scattered decorative coins */}
                 <div className="absolute top-[20%] left-[20%] text-3xl opacity-50 animate-pulse">🪙</div>
                 <div className="absolute top-[25%] right-[22%] text-2xl opacity-40">🪙</div>
                 <div className="absolute bottom-[22%] left-[25%] text-2xl opacity-45">🪙</div>
                 <div className="absolute bottom-[20%] right-[20%] text-3xl opacity-50 animate-pulse">🪙</div>
-                
-                {/* Small buildings/landmarks */}
+
+                {/* Small buildings */}
                 <div className="absolute top-[35%] left-[15%] text-4xl opacity-60">🏪</div>
                 <div className="absolute top-[30%] right-[15%] text-4xl opacity-60">🏢</div>
                 <div className="absolute bottom-[30%] left-[18%] text-4xl opacity-60">🏨</div>
@@ -310,7 +342,7 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                 const layout = getTileLayout(tile.id)
                 const colors = getTileColors(tile.colorGroup)
                 const isCorner = layout.isCorner
-                
+
                 return (
                   <div
                     key={tile.id}
@@ -322,7 +354,7 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                       height: `${layout.height}%`,
                     }}
                   >
-                    {/* Color band for non-corner tiles - on outer edge */}
+                    {/* Color band for non-corner tiles */}
                     {!isCorner && (
                       <div
                         className={`${colors.bg} absolute`}
@@ -334,9 +366,9 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                         }}
                       />
                     )}
-                    
+
                     {/* Tile content */}
-                    <div 
+                    <div
                       className={`
                         flex-1 flex flex-col items-center justify-center p-0.5 relative z-10
                         ${isCorner ? `${colors.bg}` : ""}
@@ -370,9 +402,9 @@ export function Board({ players, currentPlayerId }: BoardProps) {
           </div>
         </div>
       </div>
-      
+
       {/* Minimap in corner */}
-      <div 
+      <div
         className="absolute bottom-4 right-4 w-32 h-32 bg-[#2e7d32] rounded-lg shadow-lg border-2 border-white/50 opacity-80"
         style={{ transform: "rotateX(0deg)" }}
       >
@@ -382,7 +414,7 @@ export function Board({ players, currentPlayerId }: BoardProps) {
             const layout = getTileLayout(tile.id)
             const colors = getTileColors(tile.colorGroup)
             const hasPlayer = players.some(p => p.currentTileId === tile.id)
-            
+
             return (
               <div
                 key={tile.id}
@@ -396,7 +428,7 @@ export function Board({ players, currentPlayerId }: BoardProps) {
               />
             )
           })}
-          {/* Current player indicator on minimap */}
+          {/* Current player indicator */}
           <div
             className="absolute w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-lg"
             style={{
@@ -411,5 +443,5 @@ export function Board({ players, currentPlayerId }: BoardProps) {
   )
 }
 
-// Export layout function for AnimatedPawn
+// Export layout function for use by other components
 export { getTileLayout, CORNER_SIZE, TILE_SIZE }

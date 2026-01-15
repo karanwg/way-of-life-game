@@ -1,3 +1,15 @@
+/**
+ * IdentityTheftModal - Dramatic reveal modal for identity theft events
+ * 
+ * Shown when two players on the same tile trigger a coin swap (25% chance).
+ * Features a dramatic 3-phase animation:
+ * 1. Intro: "IDENTITY THEFT!" announcement
+ * 2. Swap: Shows both players with their coin amounts being swapped
+ * 3. Result: Shows the outcome (gained/lost coins)
+ * 
+ * ONLY shown to the two players involved in the swap.
+ */
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -14,17 +26,15 @@ export function IdentityTheftModal({ data, myPlayerName, onDismiss }: IdentityTh
   const [phase, setPhase] = useState<"intro" | "swap" | "result">("intro")
   const [showCoins, setShowCoins] = useState(false)
 
-  const isMyEvent = data.player1Name === myPlayerName || data.player2Name === myPlayerName
-  
-  const myOldCoins = data.player1Name === myPlayerName 
-    ? data.player1OldCoins 
-    : data.player2OldCoins
-  const myNewCoins = data.player1Name === myPlayerName 
-    ? data.player1NewCoins 
-    : data.player2NewCoins
-  const otherPlayer = data.player1Name === myPlayerName 
-    ? data.player2Name 
-    : data.player1Name
+  // Determine if I'm involved and which player I am
+  const isPlayer1 = data.player1Name === myPlayerName
+  const isPlayer2 = data.player2Name === myPlayerName
+  const isMyEvent = isPlayer1 || isPlayer2
+
+  // Calculate my outcome
+  const myOldCoins = isPlayer1 ? data.player1OldCoins : data.player2OldCoins
+  const myNewCoins = isPlayer1 ? data.player1NewCoins : data.player2NewCoins
+  const otherPlayer = isPlayer1 ? data.player2Name : data.player1Name
   const gained = myNewCoins > myOldCoins
   const coinDiff = Math.abs(myNewCoins - myOldCoins)
 
@@ -54,10 +64,10 @@ export function IdentityTheftModal({ data, myPlayerName, onDismiss }: IdentityTh
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Fun backdrop */}
+      {/* Dramatic purple backdrop */}
       <div className="absolute inset-0 bg-purple-900/90 backdrop-blur-md" />
       
-      {/* Playful overlay */}
+      {/* Gradient overlay */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-pink-500/10 via-transparent to-purple-500/10" />
       </div>
@@ -159,11 +169,15 @@ export function IdentityTheftModal({ data, myPlayerName, onDismiss }: IdentityTh
                 <div className="flex items-center justify-center gap-8 mt-4">
                   <div className="text-center bg-amber-100 rounded-xl p-3 border-2 border-amber-300">
                     <p className="font-bold text-gray-800">{data.player1Name}</p>
-                    <p className="text-amber-600 font-medium">{data.player1OldCoins} → <span className="font-bold">{data.player1NewCoins}</span></p>
+                    <p className="text-amber-600 font-medium">
+                      {data.player1OldCoins} → <span className="font-bold">{data.player1NewCoins}</span>
+                    </p>
                   </div>
                   <div className="text-center bg-amber-100 rounded-xl p-3 border-2 border-amber-300">
                     <p className="font-bold text-gray-800">{data.player2Name}</p>
-                    <p className="text-amber-600 font-medium">{data.player2OldCoins} → <span className="font-bold">{data.player2NewCoins}</span></p>
+                    <p className="text-amber-600 font-medium">
+                      {data.player2OldCoins} → <span className="font-bold">{data.player2NewCoins}</span>
+                    </p>
                   </div>
                 </div>
               </div>

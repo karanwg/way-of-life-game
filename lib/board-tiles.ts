@@ -1,21 +1,55 @@
+/**
+ * Board Tiles - Tile definitions and layout configuration
+ * 
+ * This module defines:
+ * - All 24 tiles on the game board
+ * - Tile effects and their mechanics
+ * - Color styling for tile groups
+ * - Layout constants for board rendering
+ * 
+ * BOARD LAYOUT:
+ * The board is a square with 6 tiles per side (24 total).
+ * Players move clockwise starting from GO (tile 0).
+ * 
+ * TILE TYPES:
+ * - Corner tiles (0, 6, 12, 18): Special tiles like GO, Police Station
+ * - Regular tiles: Properties, events, chances
+ * 
+ * EFFECTS:
+ * - coins: Simple coin gain/loss
+ * - heist_*: Steal from another player (interactive)
+ * - ponzi: Gamble for double or lose half (interactive)
+ * - police_station: Report someone for -300 coins (interactive)
+ * - Global events: Affect multiple players
+ */
+
+/**
+ * Tile Effect Types
+ * 
+ * none: No effect (just visiting)
+ * coins: Gain or lose coins (amount in tile.coins)
+ * heist_*: Interactive theft (player selects target)
+ * ponzi: Interactive gamble (75% win, 25% lose)
+ * police_station: Interactive report (target loses 300)
+ * Global events affect multiple players automatically
+ */
 export type TileEffect =
-  | "none"
-  | "coins"
-  | "heist_10"
-  | "heist_100"
-  | "heist_50"
-  | "ponzi"
-  | "police_station"
-  | "chance"
-  | "community"
-  // New chaotic events!
-  | "robin_hood"      // Steal from richest, give to poorest
-  | "tax_collector"   // Take 25 from EVERY other player
-  | "party_time"      // Everyone gets 50 coins
-  | "swap_meet"       // Swap coins with random player
-  | "banana_peel"     // Push random player back 3 spaces
-  | "coin_magnet"     // Steal 20 from each player
-  | "money_bomb"      // Everyone else loses 50 coins
+  | "none"           // No effect
+  | "coins"          // Gain/lose coins (amount in tile.coins)
+  | "heist_10"       // Steal 10% from target
+  | "heist_100"      // Steal up to 100 from target
+  | "heist_50"       // Steal 50% from target
+  | "ponzi"          // Gamble: 75% double, 25% lose half
+  | "police_station" // Report someone for -300 coins
+  | "chance"         // (unused - kept for compatibility)
+  | "community"      // (unused - kept for compatibility)
+  | "robin_hood"     // Take from richest, give to poorest
+  | "tax_collector"  // Take 25 from EVERY other player
+  | "party_time"     // Everyone gets 50 coins
+  | "swap_meet"      // Swap ALL coins with random player
+  | "banana_peel"    // Push random player back 3 spaces
+  | "coin_magnet"    // Steal 20 from EACH player
+  | "money_bomb"     // Everyone else loses 50 coins
 
 // Monopoly-style color groups
 export type ColorGroup = 

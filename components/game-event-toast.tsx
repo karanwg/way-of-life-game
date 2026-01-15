@@ -1,3 +1,13 @@
+/**
+ * GameEventToast - Toast notifications for game event results
+ * 
+ * Shows toast notifications for heist, ponzi, and police results.
+ * Only shown to players who are directly involved in the event.
+ * 
+ * NOTE: Identity theft events use their own modal (IdentityTheftModal)
+ * and should NOT be passed to this component.
+ */
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -8,7 +18,7 @@ interface GameEventToastProps {
   heistResult?: HeistResultData | null
   ponziResult?: PonziResultData | null
   policeResult?: PoliceResultData | null
-  identityTheftResult?: IdentityTheftResultData | null
+  identityTheftResult?: IdentityTheftResultData | null // Not used - identity theft has its own modal
   myPlayerName?: string
   onDismiss: () => void
 }
@@ -23,19 +33,19 @@ export function GameEventToast({
 }: GameEventToastProps) {
   const [isVisible, setIsVisible] = useState(false)
 
-  // Only show events that involve the current player
+  // Determine if this event involves the current player
   const isMyHeist = heistResult && (heistResult.thiefName === myPlayerName || heistResult.victimName === myPlayerName)
   const isMyPonzi = ponziResult && ponziResult.playerName === myPlayerName
   const isMyPolice = policeResult && (policeResult.snitchName === myPlayerName || policeResult.victimName === myPlayerName)
-  const isMyIdentityTheft = identityTheftResult && (identityTheftResult.player1Name === myPlayerName || identityTheftResult.player2Name === myPlayerName)
-
-  const hasRelevantEvent = isMyHeist || isMyPonzi || isMyPolice || isMyIdentityTheft
+  
+  // Identity theft is handled by its own modal, so we don't show it here
+  const hasRelevantEvent = isMyHeist || isMyPonzi || isMyPolice
 
   useEffect(() => {
     if (hasRelevantEvent) {
       setIsVisible(true)
       
-      // Play appropriate sound
+      // Play appropriate sound effect
       if (isMyHeist && heistResult) {
         if (heistResult.thiefName === myPlayerName) {
           playChaChingSound() // I stole money
@@ -52,30 +62,20 @@ export function GameEventToast({
         if (policeResult.victimName === myPlayerName) {
           playLoseMoneySound() // I got snitched on
         }
-      } else if (isMyIdentityTheft && identityTheftResult) {
-        const myNewCoins = identityTheftResult.player1Name === myPlayerName 
-          ? identityTheftResult.player1NewCoins 
-          : identityTheftResult.player2NewCoins
-        const myOldCoins = identityTheftResult.player1Name === myPlayerName 
-          ? identityTheftResult.player1OldCoins 
-          : identityTheftResult.player2OldCoins
-        if (myNewCoins > myOldCoins) {
-          playChaChingSound()
-        } else {
-          playLoseMoneySound()
-        }
       }
       
+      // Auto-dismiss after 3 seconds
       const timer = setTimeout(() => {
         setIsVisible(false)
-        setTimeout(onDismiss, 300)
+        setTimeout(onDismiss, 300) // Wait for fade out animation
       }, 3000)
+      
       return () => clearTimeout(timer)
     } else {
-      // Dismiss immediately if not relevant to me
+      // Not relevant to me - dismiss immediately
       onDismiss()
     }
-  }, [hasRelevantEvent, onDismiss, isMyHeist, heistResult, isMyPonzi, ponziResult, isMyPolice, policeResult, isMyIdentityTheft, identityTheftResult, myPlayerName])
+  }, [hasRelevantEvent, onDismiss, isMyHeist, heistResult, isMyPonzi, ponziResult, isMyPolice, policeResult, myPlayerName])
 
   if (!hasRelevantEvent) return null
 
@@ -159,31 +159,6 @@ export function GameEventToast({
           </div>
         )
       }
-    }
-
-    if (isMyIdentityTheft && identityTheftResult) {
-      const myOldCoins = identityTheftResult.player1Name === myPlayerName 
-        ? identityTheftResult.player1OldCoins 
-        : identityTheftResult.player2OldCoins
-      const myNewCoins = identityTheftResult.player1Name === myPlayerName 
-        ? identityTheftResult.player1NewCoins 
-        : identityTheftResult.player2NewCoins
-      const otherPlayer = identityTheftResult.player1Name === myPlayerName 
-        ? identityTheftResult.player2Name 
-        : identityTheftResult.player1Name
-      const gained = myNewCoins > myOldCoins
-      
-      return (
-        <div className="flex items-center gap-2 text-sm">
-          <span>🎭</span>
-          <span className="text-gray-700">
-            Swapped coins with <span className="text-purple-600 font-bold">{otherPlayer}</span>{" "}
-            <span className={gained ? "text-emerald-600 font-bold" : "text-red-600 font-bold"}>
-              ({myOldCoins} → {myNewCoins})
-            </span>
-          </span>
-        </div>
-      )
     }
 
     return null

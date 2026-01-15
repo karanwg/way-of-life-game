@@ -1,3 +1,15 @@
+/**
+ * HeistModal - Target selection modal for heist tiles
+ * 
+ * Shown when a player lands on a heist tile (pickpocket, quick heist, grand heist).
+ * Player must select a target to steal from before the turn can continue.
+ * 
+ * HEIST TYPES:
+ * - "10": Steal 10% of target's coins
+ * - "100": Steal up to 100 coins
+ * - "50": Steal 50% of target's coins
+ */
+
 "use client"
 
 import { useState } from "react"
@@ -10,10 +22,14 @@ interface HeistModalProps {
 
 export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleConfirm = () => {
-    if (selectedTarget) {
+    if (selectedTarget && !isSubmitting) {
+      setIsSubmitting(true)
       onSelectTarget(selectedTarget)
+      // Note: Modal will be dismissed by parent when result comes back
+      // If it takes too long, isSubmitting prevents double-clicks
     }
   }
 
@@ -39,7 +55,7 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
     switch (data.type) {
       case "10": return "🤏"
       case "100": return "🎭"
-      case "50": return "🔫"
+      case "50": return "💎"
       default: return "💰"
     }
   }
@@ -51,6 +67,27 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
       case "50": return Math.floor(targetCoins * 0.5)
       default: return 0
     }
+  }
+
+  // Handle case where there are no valid targets
+  if (data.availableTargets.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-emerald-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white border-4 border-orange-400 rounded-2xl p-6 max-w-md w-full shadow-playful animate-bounce-in">
+          <div className="text-center">
+            <div className="text-5xl mb-4">😕</div>
+            <h2 className="text-2xl font-black text-orange-600 mb-2">No Targets!</h2>
+            <p className="text-amber-700 mb-4">There's no one to steal from.</p>
+            <button
+              onClick={() => onSelectTarget("")}
+              className="w-full py-3 rounded-xl font-black text-lg bg-gray-200 border-2 border-gray-300 text-gray-600 hover:bg-gray-300"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -77,14 +114,15 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
             return (
               <button
                 key={target.id}
-                onClick={() => setSelectedTarget(target.id)}
+                onClick={() => !isSubmitting && setSelectedTarget(target.id)}
+                disabled={isSubmitting}
                 className={`
                   w-full p-4 rounded-xl border-3 transition-all
                   flex items-center justify-between
-                  ${
-                    isSelected
-                      ? "border-orange-500 bg-orange-100 shadow-playful"
-                      : "border-amber-200 bg-amber-50 hover:border-orange-300 hover:bg-orange-50"
+                  ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}
+                  ${isSelected
+                    ? "border-orange-500 bg-orange-100 shadow-playful"
+                    : "border-amber-200 bg-amber-50 hover:border-orange-300 hover:bg-orange-50"
                   }
                 `}
               >
@@ -115,17 +153,16 @@ export function HeistModal({ data, onSelectTarget }: HeistModalProps) {
         {/* Confirm Button */}
         <button
           onClick={handleConfirm}
-          disabled={!selectedTarget}
+          disabled={!selectedTarget || isSubmitting}
           className={`
             w-full py-3 rounded-xl font-black text-lg transition-all border-2
-            ${
-              selectedTarget
-                ? "bg-orange-500 border-orange-600 text-white hover:bg-orange-600 shadow-playful hover:-translate-y-0.5"
-                : "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
+            ${selectedTarget && !isSubmitting
+              ? "bg-orange-500 border-orange-600 text-white hover:bg-orange-600 shadow-playful hover:-translate-y-0.5"
+              : "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
             }
           `}
         >
-          {selectedTarget ? "Execute Heist! 🎯" : "Select a Target"}
+          {isSubmitting ? "Executing..." : selectedTarget ? "Execute Heist! 🎯" : "Select a Target"}
         </button>
       </div>
     </div>

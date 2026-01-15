@@ -1,5 +1,17 @@
+/**
+ * PonziModal - Gamble decision modal for chance/casino tiles
+ * 
+ * Shown when a player lands on a Ponzi/gamble tile.
+ * Player can choose to:
+ * - Gamble: 75% chance to double coins, 25% chance to lose half
+ * - Skip: Continue without gambling
+ * 
+ * The modal shows the potential gains/losses based on current coin count.
+ */
+
 "use client"
 
+import { useState } from "react"
 import type { PonziPromptData } from "@/lib/p2p-types"
 
 interface PonziModalProps {
@@ -8,7 +20,16 @@ interface PonziModalProps {
 }
 
 export function PonziModal({ data, onChoice }: PonziModalProps) {
-  const potentialGain = data.currentCoins // Double = gain same amount
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleChoice = (invest: boolean) => {
+    if (!isSubmitting) {
+      setIsSubmitting(true)
+      onChoice(invest)
+    }
+  }
+
+  const potentialGain = data.currentCoins // Doubling means gaining same amount
   const potentialLoss = Math.floor(data.currentCoins / 2)
 
   return (
@@ -62,16 +83,26 @@ export function PonziModal({ data, onChoice }: PonziModalProps) {
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-4">
           <button
-            onClick={() => onChoice(false)}
-            className="py-4 rounded-xl font-black text-lg bg-gray-200 border-2 border-gray-300 text-gray-600 hover:bg-gray-300 transition-all"
+            onClick={() => handleChoice(false)}
+            disabled={isSubmitting}
+            className={`
+              py-4 rounded-xl font-black text-lg bg-gray-200 border-2 border-gray-300 text-gray-600 
+              transition-all
+              ${isSubmitting ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-300"}
+            `}
           >
-            Skip 🚶
+            {isSubmitting ? "..." : "Skip 🚶"}
           </button>
           <button
-            onClick={() => onChoice(true)}
-            className="py-4 rounded-xl font-black text-lg bg-purple-500 border-2 border-purple-600 text-white hover:bg-purple-600 transition-all shadow-playful hover:-translate-y-0.5"
+            onClick={() => handleChoice(true)}
+            disabled={isSubmitting}
+            className={`
+              py-4 rounded-xl font-black text-lg bg-purple-500 border-2 border-purple-600 text-white 
+              transition-all shadow-playful
+              ${isSubmitting ? "opacity-50 cursor-not-allowed" : "hover:bg-purple-600 hover:-translate-y-0.5"}
+            `}
           >
-            Gamble! 🎲
+            {isSubmitting ? "Rolling..." : "Gamble! 🎲"}
           </button>
         </div>
 

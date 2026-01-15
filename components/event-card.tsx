@@ -1,14 +1,30 @@
+/**
+ * EventCard - Overlay card for tile landing events
+ * 
+ * Displays when a player lands on a tile with an effect.
+ * Shows the tile name, description, and coin change.
+ * 
+ * Features:
+ * - Animated entrance/exit
+ * - Sound effects for coin gain/loss
+ * - Auto-dismisses after 4 seconds
+ * - Visual styling based on positive/negative outcome
+ * - Shows "Everyone Affected" badge for global events
+ */
+
 "use client"
 
 import { useEffect, useState, useRef } from "react"
 import { X } from "lucide-react"
 import { playChaChingSound, playLoseMoneySound } from "@/lib/sounds"
 
+/** Data structure for event card display */
 export interface EventCardData {
   tileName: string
   tileText: string
   coinsDelta: number
   isGlobal: boolean
+  /** Name of player who triggered this event (for impacted players) */
   affectedPlayerName?: string
 }
 
