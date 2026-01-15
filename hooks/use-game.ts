@@ -231,7 +231,7 @@ export function useGame() {
   // ============================================================================
 
   /** Create a new room as host */
-  const createRoom = useCallback((hostName: string) => {
+  const createRoom = useCallback(async (hostName: string) => {
     // Clean up any existing connection
     hostRef.current?.disconnect()
     guestRef.current?.disconnect()
@@ -243,12 +243,13 @@ export function useGame() {
     const host = new HostEngine(handleNetworkEvent)
     hostRef.current = host
     
-    const roomCode = host.createRoom(hostName)
+    // createRoom is async due to dynamic PeerJS import
+    const roomCode = await host.createRoom(hostName)
     storeRef.current.setConnection("connecting", roomCode, true)
   }, [handleNetworkEvent])
 
   /** Join an existing room as guest */
-  const joinRoom = useCallback((roomCode: string, playerName: string) => {
+  const joinRoom = useCallback(async (roomCode: string, playerName: string) => {
     // Clean up any existing connection
     hostRef.current?.disconnect()
     guestRef.current?.disconnect()
@@ -260,7 +261,8 @@ export function useGame() {
     const guest = new GuestClient(handleNetworkEvent)
     guestRef.current = guest
     
-    guest.joinRoom(roomCode, playerName)
+    // joinRoom is async due to dynamic PeerJS import
+    await guest.joinRoom(roomCode, playerName)
   }, [handleNetworkEvent])
 
   /** Leave the current room */

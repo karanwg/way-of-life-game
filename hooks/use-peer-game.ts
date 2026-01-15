@@ -17,7 +17,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import Peer, { DataConnection } from "peerjs"
+import type { Peer as PeerType, DataConnection } from "peerjs"
 import type { Player } from "@/lib/types"
 import type {
   RoomState,
@@ -125,7 +125,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
   const [myPlayer, setMyPlayer] = useState<Player | null>(null)
 
   // Refs to avoid stale closures in event handlers
-  const peerRef = useRef<Peer | null>(null)
+  const peerRef = useRef<PeerType | null>(null)
   const connectionsRef = useRef<Map<string, DataConnection>>(new Map())
   const hostConnectionRef = useRef<DataConnection | null>(null)
   const gameEngineRef = useRef<P2PGameEngine | null>(null)
@@ -617,7 +617,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
 
   /** Create a new game room as host */
   const createRoom = useCallback(
-    (hostName: string) => {
+    async (hostName: string) => {
       const roomCode = generateRoomCode()
       const peerId = roomCodeToPeerId(roomCode)
 
@@ -626,6 +626,9 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
       // Initialize game engine
       gameEngineRef.current = new P2PGameEngine()
 
+      // Dynamically import PeerJS to avoid SSR issues
+      const { default: Peer } = await import("peerjs")
+      
       // Create peer connection
       const peer = new Peer(peerId, peerConfig)
       peerRef.current = peer
@@ -673,10 +676,13 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
 
   /** Join an existing room as guest */
   const joinRoom = useCallback(
-    (roomCode: string, playerName: string) => {
+    async (roomCode: string, playerName: string) => {
       const peerId = roomCodeToPeerId(roomCode)
       setRoomState((prev) => ({ ...prev, roomCode: roomCode.toUpperCase(), role: "guest", connectionState: "connecting" }))
 
+      // Dynamically import PeerJS to avoid SSR issues
+      const { default: Peer } = await import("peerjs")
+      
       const peer = new Peer(peerConfig)
       peerRef.current = peer
 

@@ -12,7 +12,7 @@
  * - Emit events to the local UI
  */
 
-import Peer, { DataConnection } from "peerjs"
+import type { Peer as PeerType, DataConnection } from "peerjs"
 import { P2PGameEngine } from "../p2p-game-engine"
 import type { GuestToHostMessage, HostToGuestMessage } from "../p2p-types"
 import type { NetworkEvent, MoveResultForNetwork } from "./types"
@@ -21,7 +21,7 @@ import { PEER_CONFIG, roomCodeToPeerId, generateRoomCode } from "./types"
 type EventHandler = (event: NetworkEvent) => void
 
 export class HostEngine {
-  private peer: Peer | null = null
+  private peer: PeerType | null = null
   private engine: P2PGameEngine
   private connections = new Map<string, DataConnection>()
   private connectionToPlayer = new Map<string, string>() // connection.peer -> playerId
@@ -39,10 +39,12 @@ export class HostEngine {
   // ============================================================================
 
   /** Create a new room and start hosting */
-  createRoom(hostName: string): string {
+  async createRoom(hostName: string): Promise<string> {
     this.roomCode = generateRoomCode()
     const peerId = roomCodeToPeerId(this.roomCode)
 
+    // Dynamically import PeerJS to avoid SSR issues
+    const { default: Peer } = await import("peerjs")
     this.peer = new Peer(peerId, PEER_CONFIG)
 
     this.peer.on("open", () => {

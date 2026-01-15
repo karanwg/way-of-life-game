@@ -11,7 +11,7 @@
  * - Emit filtered events to local UI
  */
 
-import Peer, { DataConnection } from "peerjs"
+import type { Peer as PeerType, DataConnection } from "peerjs"
 import type { GuestToHostMessage, HostToGuestMessage } from "../p2p-types"
 import type { NetworkEvent, MoveResultForNetwork } from "./types"
 import { PEER_CONFIG, roomCodeToPeerId } from "./types"
@@ -19,7 +19,7 @@ import { PEER_CONFIG, roomCodeToPeerId } from "./types"
 type EventHandler = (event: NetworkEvent) => void
 
 export class GuestClient {
-  private peer: Peer | null = null
+  private peer: PeerType | null = null
   private connection: DataConnection | null = null
   private eventHandler: EventHandler
   private myPlayerId: string | null = null
@@ -34,9 +34,11 @@ export class GuestClient {
   // ============================================================================
 
   /** Join an existing room */
-  joinRoom(roomCode: string, playerName: string) {
+  async joinRoom(roomCode: string, playerName: string) {
     const hostPeerId = roomCodeToPeerId(roomCode)
 
+    // Dynamically import PeerJS to avoid SSR issues
+    const { default: Peer } = await import("peerjs")
     this.peer = new Peer(PEER_CONFIG)
 
     this.peer.on("open", () => {
