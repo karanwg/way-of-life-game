@@ -35,6 +35,7 @@ import type {
 import { QUESTIONS } from "./questions"
 import { getTileById, TILES } from "./board-tiles"
 import { rollDie, movePlayerForward, didPassHome, rollIdentityTheftChance, rollPonziOutcome } from "./board-logic"
+import { getScaledCoinAmount, calculateAverageCoins } from "./coin-scaling"
 
 // Constants
 const LAP_BONUS_AMOUNT = 200
@@ -289,12 +290,20 @@ export class P2PGameEngine {
 
       case "coins": {
         // Simple coin change (GO, regular tiles)
-        const coinsDelta = tile.coins || 0
+        // GO (tile 0) uses fixed amount, other tiles scale with average coins
+        const baseAmount = tile.coins || 0
+        const coinsDelta = tile.id === 0 ? baseAmount : this.getScaledCoinAmountForPlayer(baseAmount)
         player.coins += coinsDelta
+        
+        // Update tile text to show actual scaled amount
+        const scaledText = tile.id === 0 
+          ? tile.text 
+          : tile.text.replace(/[+-]?\d+/, (coinsDelta >= 0 ? '+' : '') + coinsDelta.toString())
+        
         return {
           tileEvent: {
             tileName: tile.name,
-            tileText: tile.text,
+            tileText: scaledText,
             coinsDelta,
           },
         }
@@ -795,16 +804,20 @@ export class P2PGameEngine {
   // HELPER METHODS
   // ============================================================================
 
-  /** Get other players for target selection (excludes the given player) */
-  private getOtherPlayers(excludePlayerId: string): { id: string; name: string; coins: number }[] {
-    return Array.from(this.state.players.values())
-      .filter(p => p.id !== excludePlayerId)
-      .map(p => ({ id: p.id, name: p.name, coins: p.coins }))
+  /**
+   * Get the average coins across all players
+   * Used for scaling tile effects based on game economy
+   */
+  private getAverageCoins(): number {
+    return calculateAverageCoins(Array.from(this.state.players.values()))
   }
 
-  /** Get other players as full Player objects */
-  private getOtherPlayersRaw(excludePlayerId: string): Player[] {
-    return Array.from(this.state.players.values()).filter(p => p.id !== excludePlayerId)
+  /**
+   * Scale a coin amount based on the average coins of all players
+   * Uses shared utility to ensure consistency with UI display
+   */
+  private getScaledCoinAmountForPlayer(baseAmount: number): number {
+    return getScaledCoinAmount(baseAmount, this.getAverageCoins())
   }
 
   /** Check if a player has completed all questions (and is thus immune to effects) */

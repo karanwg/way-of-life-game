@@ -37,6 +37,7 @@ This is a **peer-to-peer (P2P) multiplayer quiz board game** built with Next.js 
 │  │  - Manages players Map                           │    │
 │  │  - Processes answers                             │    │
 │  │  - Handles dice rolls & tile effects             │    │
+│  │  - Scales coin effects based on average wealth   │    │
 │  └─────────────────────────────────────────────────┘    │
 │                         ▲                                │
 │                         │ Local calls                    │
@@ -70,7 +71,7 @@ This is a **peer-to-peer (P2P) multiplayer quiz board game** built with Next.js 
 | File | Purpose |
 |------|---------|
 | **`lib/p2p-types.ts`** | TypeScript types for P2P messages (GuestToHostMessage, HostToGuestMessage) |
-| **`lib/p2p-game-engine.ts`** | Game logic engine that runs on host's browser. Manages players, processes answers, handles dice rolls and tile effects. |
+| **`lib/p2p-game-engine.ts`** | Game logic engine that runs on host's browser. Manages players, processes answers, handles dice rolls and tile effects with dynamic scaling. |
 | **`hooks/use-peer-game.ts`** | React hook for PeerJS connection management. Handles room creation, joining, message routing, and state synchronization. |
 
 ### UI Components
@@ -78,19 +79,20 @@ This is a **peer-to-peer (P2P) multiplayer quiz board game** built with Next.js 
 | Component | Purpose |
 |-----------|---------|
 | **`components/room-lobby.tsx`** | Room creation/joining UI, player lobby display |
-| **`components/board.tsx`** | 12-tile elliptical game board with player pawns |
+| **`components/board.tsx`** | 24-tile Monopoly-style game board with player pawns |
 | **`components/quiz-screen.tsx`** | Question display, answer buttons, timer |
 | **`components/leaderboard.tsx`** | Sorted player rankings by coins |
 | **`components/event-card.tsx`** | Tile effect notification overlay |
-| **`components/dice-roller.tsx`** | Animated d4 dice roll display |
+| **`components/dice-roller.tsx`** | Animated d6 dice roll display |
 
 ### Game Data
 
 | File | Purpose |
 |------|---------|
-| **`lib/questions.ts`** | Array of 20 quiz questions with options and correct answer indices |
-| **`lib/board-tiles.ts`** | 12 tile definitions with effects (coins, teleport, global effects, etc.) |
-| **`lib/board-logic.ts`** | Tile effect processing, dice rolling, movement calculations |
+| **`lib/questions.ts`** | Array of quiz questions with options and correct answer indices |
+| **`lib/board-tiles.ts`** | 24 tile definitions with effects (coins, heists, gambling, global effects) |
+| **`lib/board-logic.ts`** | Dice rolling, movement calculations, random chance functions |
+| **`lib/coin-scaling.ts`** | Shared utility for scaling coin amounts based on average player wealth |
 | **`lib/types.ts`** | Core TypeScript types (Player, Question, GameEvent) |
 
 ---
@@ -104,6 +106,10 @@ type GuestToHostMessage =
   | { type: "JOIN_REQUEST"; playerName: string }
   | { type: "SUBMIT_ANSWER"; playerId: string; questionIndex: number; answerIndex: number }
   | { type: "NEXT_QUESTION"; playerId: string; wasCorrect: boolean }
+  | { type: "HEIST_TARGET"; playerId: string; targetId: string }
+  | { type: "PONZI_CHOICE"; playerId: string; invest: boolean }
+  | { type: "POLICE_TARGET"; playerId: string; targetId: string }
+  | { type: "SWAP_MEET_TARGET"; playerId: string; targetId: string }
   | { type: "LEAVE_GAME"; playerId: string }
 ```
 
@@ -118,7 +124,12 @@ type HostToGuestMessage =
   | { type: "GAME_STARTED"; allPlayers: Player[] }
   | { type: "STATE_UPDATE"; allPlayers: Player[] }
   | { type: "ANSWER_RESULT"; playerId: string; correct: boolean; newCoins: number; allPlayers: Player[] }
-  | { type: "MOVE_RESULT"; playerId: string; dieRoll: number | null; tileEvent: TileEvent | null; lapBonus: LapBonus | null; allPlayers: Player[] }
+  | { type: "MOVE_RESULT"; playerId: string; moveResult: MoveResult; allPlayers: Player[] }
+  | { type: "HEIST_RESULT"; heistResult: HeistResultData; allPlayers: Player[] }
+  | { type: "PONZI_RESULT"; ponziResult: PonziResultData; allPlayers: Player[] }
+  | { type: "POLICE_RESULT"; policeResult: PoliceResultData; allPlayers: Player[] }
+  | { type: "SWAP_MEET_RESULT"; swapMeetResult: SwapMeetResultData; allPlayers: Player[] }
+  | { type: "IDENTITY_THEFT_EVENT"; identityTheftEvent: IdentityTheftResultData; allPlayers: Player[] }
   | { type: "GAME_RESET" }
   | { type: "HOST_DISCONNECTED" }
 ```
@@ -140,14 +151,15 @@ type HostToGuestMessage =
 
 ### 3. Gameplay Loop
 
-1. **Question Display**: 20-second timer starts
+1. **Question Display**: Timer starts
 2. **Answer Submission**: Player clicks option → SUBMIT_ANSWER sent to host → Host validates → ANSWER_RESULT broadcast
-3. **Movement**: If correct, NEXT_QUESTION sent → Host rolls dice, moves player, processes tile → MOVE_RESULT broadcast
-4. **State Sync**: All clients update their local state from broadcast messages
+3. **Movement**: If correct, NEXT_QUESTION sent → Host rolls d6 dice, moves player, processes tile → MOVE_RESULT broadcast
+4. **Interactive Effects**: Some tiles trigger interactive prompts (heist target selection, gambling choice, etc.)
+5. **State Sync**: All clients update their local state from broadcast messages
 
 ### 4. Game End
 
-- When all players complete 20 questions, GameOver screen shows final rankings
+- When all players complete all questions, GameOver screen shows final rankings
 
 ---
 
@@ -157,14 +169,12 @@ type HostToGuestMessage =
 type Player = {
   id: string                    // Unique player ID
   name: string                  // Display name
-  coins: number                 // Current score
-  currentQuestionIndex: number  // 0-19, then complete
+  coins: number                 // Current score (can be negative)
+  currentQuestionIndex: number  // Progress through questions
   answered: boolean             // Has answered current question
   selectedAnswer: number | null // Selected option index
-  currentTileId: number         // Board position (0-11)
+  currentTileId: number         // Board position (0-23)
   lapsCompleted: number         // Full board circuits
-  skippedNextQuestion: boolean  // Debuff from certain tiles
-  nextRolledMax: number | null  // Die cap from certain tiles
 }
 ```
 
@@ -172,16 +182,45 @@ type Player = {
 
 ## Tile Effects
 
+The board has 24 tiles with various effects. Coin gain/loss tiles scale dynamically based on the average coins of all players.
+
+### Effect Types
+
 | Effect Type | Description |
 |-------------|-------------|
-| `none` | No effect |
-| `coins` | Add/subtract coins |
-| `teleport` | Move to specific tile |
-| `teleport_random` | Move to random tile |
-| `move_and_coins` | Move forward + coins |
-| `coins_global` | Affect all players' coins |
-| `debuff_skip_next` | Skip next dice roll |
-| `next_die_cap` | Limit next die roll maximum |
+| `none` | No effect (safe space) |
+| `coins` | Add/subtract coins (scales with average wealth) |
+| `heist_10` | Steal 10% from a chosen player |
+| `heist_100` | Steal up to 100 coins from a chosen player |
+| `heist_50` | Steal 50% from a chosen player |
+| `ponzi` | Gamble: 75% chance to double coins, 25% chance to lose half |
+| `police_station` | Report someone: they lose 300 coins |
+| `robin_hood` | Take 150 from richest player, give to poorest |
+| `tax_collector` | Take 25 coins from every other player |
+| `party_time` | Everyone (including you) gets 50 coins |
+| `swap_meet` | Choose a player to swap ALL coins with |
+| `banana_peel` | Push a random player back 3 spaces |
+| `coin_magnet` | Steal 20 coins from each other player |
+| `money_bomb` | Every other player loses 50 coins |
+
+### Dynamic Coin Scaling
+
+Coin gain/loss tiles scale based on the average coins of all players:
+
+- **Base reference**: 500 coins
+- **Formula**: `multiplier = max(1, averageCoins / 500)`
+- **Examples**:
+  - Average 500 coins → 1x (base amounts)
+  - Average 1000 coins → 2x
+  - Average 2000 coins → 4x
+  - Average 3000 coins → 6x
+
+This keeps tile effects impactful throughout the game as players accumulate wealth.
+
+### Special Events
+
+- **Identity Theft**: 25% chance when two players land on the same tile - their coins are swapped!
+- **Lap Bonus**: +200 coins when passing GO (tile 0)
 
 ---
 

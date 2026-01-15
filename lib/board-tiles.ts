@@ -16,18 +16,23 @@
  * - Regular tiles: Properties, events, chances
  * 
  * EFFECTS:
- * - coins: Simple coin gain/loss
+ * - coins: Coin gain/loss (SCALES with average player wealth - see p2p-game-engine.ts)
  * - heist_*: Steal from another player (interactive)
  * - ponzi: Gamble for double or lose half (interactive)
  * - police_station: Report someone for -300 coins (interactive)
  * - Global events: Affect multiple players
+ * 
+ * DYNAMIC SCALING:
+ * Coin gain/loss tiles (effect="coins") scale based on the average coins of all players.
+ * Base amounts are defined here, but actual amounts are calculated at runtime.
+ * GO (tile 0) is exempt from scaling and always awards a fixed amount.
  */
 
 /**
  * Tile Effect Types
  * 
  * none: No effect (just visiting)
- * coins: Gain or lose coins (amount in tile.coins)
+ * coins: Gain or lose coins (base amount in tile.coins, scales with average wealth)
  * heist_*: Interactive theft (player selects target)
  * ponzi: Interactive gamble (75% win, 25% lose)
  * police_station: Interactive report (target loses 300)
@@ -237,12 +242,12 @@ export const TILES: Tile[] = [
   },
   {
     id: 16,
-    name: "Bus Stop",
-    effect: "coins",
-    coins: 40,
-    text: "Found coins under the seat! +40 coins",
-    colorGroup: "railroad",
-    emoji: "🚌",
+    name: "Slot Machine",
+    effect: "ponzi",
+    coins: 0,
+    text: "75% double, 25% lose half!",
+    colorGroup: "chance",
+    emoji: "🎲",
   },
   {
     id: 17,

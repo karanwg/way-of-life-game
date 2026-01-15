@@ -248,6 +248,7 @@ export function QuizScreen({
             initialSeconds={20}
             onTimeExpired={handleTimeExpired}
             isActive={timerActive && !player.answered}
+            resetKey={player.currentQuestionIndex}
           />
         </div>
       </div>

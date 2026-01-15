@@ -21,10 +21,11 @@
 
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useMemo } from "react"
 import type { Player } from "@/lib/types"
 import { TILES, getTileColors, TILES_PER_SIDE } from "@/lib/board-tiles"
 import { AnimatedPawn } from "@/components/animated-pawn"
+import { getScaledCoinAmount, calculateAverageCoins } from "@/lib/coin-scaling"
 
 interface BoardProps {
   players: Player[]
@@ -174,6 +175,15 @@ export function Board({ players, currentPlayerId }: BoardProps) {
   const getPlayerIndex = (playerId: string) => {
     return players.findIndex((p) => p.id === playerId)
   }
+
+  /** 
+   * Calculate average coins across all players for scaling display
+   * Memoized to prevent recalculation on every render
+   */
+  const averageCoins = useMemo(
+    () => calculateAverageCoins(players),
+    [players]
+  )
 
   // Get current player's tile for camera tracking
   const myCurrentTileId = players.find(p => p.id === currentPlayerId)?.currentTileId ?? 0
@@ -342,6 +352,14 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                 const layout = getTileLayout(tile.id)
                 const colors = getTileColors(tile.colorGroup)
                 const isCorner = layout.isCorner
+                
+                // Calculate scaled coin amount for display
+                // Only tiles with effect="coins" show coin amounts
+                // GO (tile 0) doesn't scale, other coin-effect tiles do
+                const hasCoinsEffect = tile.effect === "coins" && tile.coins !== undefined && tile.coins !== 0
+                const displayCoins = hasCoinsEffect
+                  ? (tile.id === 0 ? tile.coins : getScaledCoinAmount(tile.coins, averageCoins))
+                  : 0
 
                 return (
                   <div
@@ -378,9 +396,9 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                       <span className="text-[11px] font-black text-[#1a1a1a] leading-tight text-center mt-0.5 drop-shadow-sm">
                         {tile.name}
                       </span>
-                      {tile.coins !== 0 && tile.coins !== undefined && (
-                        <span className={`text-[10px] font-bold ${tile.coins > 0 ? "text-green-800" : "text-red-700"}`}>
-                          {tile.coins > 0 ? "+" : ""}{tile.coins}
+                      {displayCoins !== 0 && (
+                        <span className={`text-[10px] font-bold ${displayCoins > 0 ? "text-green-800" : "text-red-700"}`}>
+                          {displayCoins > 0 ? "+" : ""}{displayCoins}
                         </span>
                       )}
                     </div>

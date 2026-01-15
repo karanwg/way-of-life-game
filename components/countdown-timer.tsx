@@ -6,19 +6,30 @@ interface CountdownTimerProps {
   initialSeconds: number
   onTimeExpired: () => void
   isActive: boolean
+  /** Change this value to reset the timer (e.g., question index) */
+  resetKey?: number | string
 }
 
-export function CountdownTimer({ initialSeconds, onTimeExpired, isActive }: CountdownTimerProps) {
+export function CountdownTimer({ initialSeconds, onTimeExpired, isActive, resetKey }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState(initialSeconds)
   const onTimeExpiredRef = useRef(onTimeExpired)
+  const hasExpiredRef = useRef(false)
 
+  // Keep callback ref updated
   useEffect(() => {
     onTimeExpiredRef.current = onTimeExpired
   }, [onTimeExpired])
 
+  // Reset timer when resetKey changes (new question)
   useEffect(() => {
-    if (!isActive) {
-      setTimeLeft(initialSeconds)
+    setTimeLeft(initialSeconds)
+    hasExpiredRef.current = false
+  }, [resetKey, initialSeconds])
+
+  // Timer countdown - only runs when active, pauses otherwise
+  useEffect(() => {
+    // Don't run if paused or already expired
+    if (!isActive || hasExpiredRef.current) {
       return
     }
 
@@ -26,6 +37,7 @@ export function CountdownTimer({ initialSeconds, onTimeExpired, isActive }: Coun
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval)
+          hasExpiredRef.current = true
           setTimeout(() => onTimeExpiredRef.current(), 0)
           return 0
         }
@@ -34,7 +46,7 @@ export function CountdownTimer({ initialSeconds, onTimeExpired, isActive }: Coun
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isActive, initialSeconds])
+  }, [isActive]) // Only depend on isActive - timer resumes from current timeLeft
 
   const percentage = (timeLeft / initialSeconds) * 100
   const isLow = timeLeft <= 5
