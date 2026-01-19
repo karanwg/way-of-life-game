@@ -117,11 +117,11 @@ export function useGame() {
             // Schedule lap bonus notification after dice/movement animation
             scheduleTimeout(() => {
               storeRef.current.showNotification({ type: "lap_bonus", data: event.lapBonus! })
-            }, 4000)
+            }, 5000)
           }
           if (event.tileEvent) {
             // Schedule after lap bonus if present, otherwise after animation
-            const tileEventDelay = event.lapBonus ? 4500 : 4000
+            const tileEventDelay = event.lapBonus ? 5500 : 5000
             scheduleTimeout(() => {
               storeRef.current.showNotification({ type: "tile_event", data: event.tileEvent! })
             }, tileEventDelay)
@@ -134,7 +134,7 @@ export function useGame() {
               if (storeRef.current.state.pendingInteraction === null) {
                 storeRef.current.completeTurn()
               }
-            }, 4000)
+            }, 5000)
           }
         }
         break
@@ -144,28 +144,28 @@ export function useGame() {
         // appears so dismissNotificationAndCheckTurn knows an interaction is pending
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("heist", event.data)
-        }, 3800)
+        }, 4800)
         break
 
       case "ponzi_prompt":
         // Delay to wait for pawn movement animation, but set BEFORE tile notification
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("ponzi", event.data)
-        }, 3800)
+        }, 4800)
         break
 
       case "police_prompt":
         // Delay to wait for pawn movement animation, but set BEFORE tile notification
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("police", event.data)
-        }, 3800)
+        }, 4800)
         break
 
       case "swap_meet_prompt":
         // Delay to wait for pawn movement animation, but set BEFORE tile notification
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("swap_meet", event.data)
-        }, 3800)
+        }, 4800)
         break
 
       case "heist_result": {

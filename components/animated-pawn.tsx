@@ -69,8 +69,8 @@ function getPlayerOffset(
 
 // Animation timing constants
 const DEFAULT_START_DELAY = 1900 // Wait for dice animation to complete
-const HOP_DURATION = 250 // Duration of each hop
-const PAUSE_BETWEEN_HOPS = 50 // Pause between hops
+const HOP_DURATION = 375 // Duration of each hop (1.5x slower)
+const PAUSE_BETWEEN_HOPS = 75 // Pause between hops (1.5x slower)
 
 export function AnimatedPawn({
   player,
@@ -174,8 +174,8 @@ export function AnimatedPawn({
         `,
         transformStyle: "preserve-3d",
         transition: isHopping 
-          ? "left 0.15s ease-out, top 0.15s ease-out" 
-          : "left 0.3s ease-out, top 0.3s ease-out",
+          ? "left 0.225s ease-out, top 0.225s ease-out" 
+          : "left 0.45s ease-out, top 0.45s ease-out",
       }}
     >
       <PlayerPawn
