@@ -1,10 +1,31 @@
-// Procedural Background Music Generator
-// Creates a chill, island-style ambient soundtrack
+/**
+ * Background Music Manager
+ * 
+ * Manages two music tracks:
+ * - Lobby: Procedurally generated chill island-style music
+ * - Gameplay: MP3 file for gameplay and podium
+ * 
+ * Music is ON by default.
+ */
+
+// ============================================================================
+// STATE
+// ============================================================================
+
+type MusicTrack = "lobby" | "gameplay"
 
 let audioContext: AudioContext | null = null
 let isPlaying = false
+let currentTrack: MusicTrack = "lobby"
 let masterGain: GainNode | null = null
 let schedulerInterval: NodeJS.Timeout | null = null
+
+// Gameplay MP3 audio element
+let gameplayAudio: HTMLAudioElement | null = null
+
+// ============================================================================
+// PROCEDURAL LOBBY MUSIC
+// ============================================================================
 
 // Pentatonic scale for island/chill vibe (C major pentatonic)
 const SCALE = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25] // C, D, E, G, A, C, D, E
@@ -143,7 +164,7 @@ function playBongo(startTime: number) {
 
 // Schedule music loop
 function scheduleMusic() {
-  if (!audioContext || !isPlaying) return
+  if (!audioContext || !isPlaying || currentTrack !== "lobby") return
 
   const now = audioContext.currentTime
   const beatDuration = 0.5 // 120 BPM feel but half-time = chill
@@ -183,47 +204,133 @@ function scheduleMusic() {
   beatCount++
 }
 
-export function startBGM() {
-  if (isPlaying) return
-
+function startLobbyMusic() {
   createAudioContext()
   if (audioContext?.state === "suspended") {
     audioContext.resume()
   }
 
-  isPlaying = true
   beatCount = 0
   currentChordIndex = 0
 
   // Schedule beats
-  schedulerInterval = setInterval(scheduleMusic, 500)
+  if (!schedulerInterval) {
+    schedulerInterval = setInterval(scheduleMusic, 500)
+  }
   scheduleMusic() // Start immediately
 }
 
-export function stopBGM() {
-  isPlaying = false
+function stopLobbyMusic() {
   if (schedulerInterval) {
     clearInterval(schedulerInterval)
     schedulerInterval = null
   }
 }
 
+// ============================================================================
+// GAMEPLAY MP3 MUSIC
+// ============================================================================
+
+function getGameplayAudio(): HTMLAudioElement {
+  if (!gameplayAudio) {
+    gameplayAudio = new Audio("/bgm.mp3")
+    gameplayAudio.loop = true
+    gameplayAudio.volume = 0.4
+  }
+  return gameplayAudio
+}
+
+function startGameplayMusic() {
+  const audio = getGameplayAudio()
+  audio.currentTime = 0
+  audio.play().catch(err => {
+    console.warn("Failed to play gameplay BGM:", err)
+  })
+}
+
+function stopGameplayMusic() {
+  if (gameplayAudio) {
+    gameplayAudio.pause()
+    gameplayAudio.currentTime = 0
+  }
+}
+
+// ============================================================================
+// PUBLIC API
+// ============================================================================
+
+/** Start background music (lobby track by default) */
+export function startBGM(track: MusicTrack = "lobby") {
+  if (isPlaying && currentTrack === track) return
+
+  // Stop current music first
+  if (isPlaying) {
+    if (currentTrack === "lobby") {
+      stopLobbyMusic()
+    } else {
+      stopGameplayMusic()
+    }
+  }
+
+  isPlaying = true
+  currentTrack = track
+
+  if (track === "lobby") {
+    startLobbyMusic()
+  } else {
+    startGameplayMusic()
+  }
+}
+
+/** Stop all background music */
+export function stopBGM() {
+  isPlaying = false
+  stopLobbyMusic()
+  stopGameplayMusic()
+}
+
+/** Toggle music on/off */
 export function toggleBGM(): boolean {
   if (isPlaying) {
     stopBGM()
     return false
   } else {
-    startBGM()
+    startBGM(currentTrack)
     return true
   }
 }
 
+/** Check if music is currently playing */
 export function isBGMPlaying(): boolean {
   return isPlaying
 }
 
+/** Get current track */
+export function getCurrentTrack(): MusicTrack {
+  return currentTrack
+}
+
+/** Switch to gameplay music (for game start) */
+export function switchToGameplayMusic() {
+  if (!isPlaying) return // Don't switch if music is off
+  startBGM("gameplay")
+}
+
+/** Switch to lobby music (for game end/lobby) */
+export function switchToLobbyMusic() {
+  if (!isPlaying) return // Don't switch if music is off
+  startBGM("lobby")
+}
+
+/** Set volume for both tracks (0-1) */
 export function setBGMVolume(volume: number) {
+  const clampedVolume = Math.max(0, Math.min(1, volume))
+  
   if (masterGain) {
-    masterGain.gain.value = Math.max(0, Math.min(1, volume)) * 0.3
+    masterGain.gain.value = clampedVolume * 0.3
+  }
+  
+  if (gameplayAudio) {
+    gameplayAudio.volume = clampedVolume * 0.4
   }
 }

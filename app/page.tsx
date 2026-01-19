@@ -35,14 +35,33 @@ import { GameCountdown } from "@/components/game-countdown"
 import { IdentityTheftModal } from "@/components/identity-theft-modal"
 import { useGame } from "@/hooks/use-game"
 import { QUESTIONS } from "@/lib/questions"
-import { toggleBGM } from "@/lib/bgm"
+import { toggleBGM, isBGMPlaying, switchToGameplayMusic, switchToLobbyMusic, startBGM } from "@/lib/bgm"
 
 export default function Home() {
   const game = useGame()
   const { state } = game
   
   // Local UI state
-  const [bgmPlaying, setBgmPlaying] = useState(false)
+  const [bgmPlaying, setBgmPlaying] = useState(true) // Music ON by default
+  
+  // Start music on mount and switch tracks based on game phase
+  useEffect(() => {
+    // Start lobby music on initial load (if not already playing)
+    if (!isBGMPlaying()) {
+      startBGM("lobby")
+      setBgmPlaying(true)
+    }
+  }, [])
+  
+  // Switch music based on game phase
+  useEffect(() => {
+    if (state.gamePhase === "playing" || state.gamePhase === "countdown") {
+      switchToGameplayMusic()
+    } else if (state.gamePhase === "lobby") {
+      switchToLobbyMusic()
+    }
+    // Game over keeps gameplay music (podium)
+  }, [state.gamePhase])
 
   // ============================================================================
   // EVENT HANDLERS

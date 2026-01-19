@@ -5,7 +5,7 @@ import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import type { Player } from "@/lib/types"
 import type { RoomState } from "@/lib/p2p-types"
-import { toggleBGM, isBGMPlaying } from "@/lib/bgm"
+import { toggleBGM, isBGMPlaying, startBGM } from "@/lib/bgm"
 
 interface RoomLobbyProps {
   roomState: RoomState
@@ -25,8 +25,14 @@ function BGMToggle() {
   const [playing, setPlaying] = useState(isBGMPlaying())
 
   const handleToggle = () => {
-    const nowPlaying = toggleBGM()
-    setPlaying(nowPlaying)
+    // If music hasn't started yet, start it (handles first user interaction)
+    if (!isBGMPlaying()) {
+      startBGM("lobby")
+      setPlaying(true)
+    } else {
+      const nowPlaying = toggleBGM()
+      setPlaying(nowPlaying)
+    }
   }
 
   return (
@@ -218,6 +224,12 @@ export function RoomLobby({
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!playerName.trim()) return
+    
+    // Start music on first user interaction (browsers require user gesture)
+    if (!isBGMPlaying()) {
+      startBGM("lobby")
+    }
+    
     setIsLoading(true)
     setError(null)
     try {
@@ -233,6 +245,12 @@ export function RoomLobby({
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!playerName.trim() || !roomCode.trim()) return
+    
+    // Start music on first user interaction (browsers require user gesture)
+    if (!isBGMPlaying()) {
+      startBGM("lobby")
+    }
+    
     setIsLoading(true)
     setError(null)
     try {
