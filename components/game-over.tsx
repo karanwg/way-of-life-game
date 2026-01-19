@@ -11,9 +11,23 @@ interface GameOverProps {
 export function GameOver({ players, onPlayAgain }: GameOverProps) {
   const sortedPlayers = [...players].sort((a, b) => b.coins - a.coins)
   const topThree = sortedPlayers.slice(0, 3)
-  const podiumOrder = topThree.length >= 3 ? [topThree[1], topThree[0], topThree[2]] : topThree
-  const podiumHeights = ["h-20", "h-28", "h-16"]
-  const medals = ["🥈", "🥇", "🥉"]
+  
+  // Podium display order: [2nd, 1st, 3rd] for visual layout (1st in center, tallest)
+  // Only reorder if we have 3+ players, otherwise keep rank order
+  const podiumOrder = topThree.length >= 3 
+    ? [topThree[1], topThree[0], topThree[2]] 
+    : topThree
+  
+  // Heights and medals match the display order
+  // For 3 players: [2nd place, 1st place, 3rd place]
+  // For fewer: [1st, 2nd, ...] (no reordering)
+  const podiumHeightsReordered = ["h-20", "h-28", "h-16"] // 2nd, 1st, 3rd
+  const podiumHeightsNormal = ["h-28", "h-20", "h-16"]    // 1st, 2nd, 3rd
+  const medalsReordered = ["🥈", "🥇", "🥉"]              // 2nd, 1st, 3rd
+  const medalsNormal = ["🥇", "🥈", "🥉"]                 // 1st, 2nd, 3rd
+  
+  const podiumHeights = topThree.length >= 3 ? podiumHeightsReordered : podiumHeightsNormal
+  const medals = topThree.length >= 3 ? medalsReordered : medalsNormal
 
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-200 overflow-hidden">
@@ -57,7 +71,11 @@ export function GameOver({ players, onPlayAgain }: GameOverProps) {
                 <div className="flex items-end justify-center gap-3 mb-6">
                   {podiumOrder.map((player, displayIndex) => {
                     if (!player) return null
-                    const actualIndex = displayIndex === 1 ? 0 : displayIndex === 0 ? 1 : 2
+                    // actualIndex is the real rank (0=1st, 1=2nd, 2=3rd)
+                    // Only apply podium reordering when we have 3+ players
+                    const actualIndex = topThree.length >= 3
+                      ? (displayIndex === 1 ? 0 : displayIndex === 0 ? 1 : 2)
+                      : displayIndex
                     const pawnColor = getPawnColor(sortedPlayers.indexOf(player))
 
                     return (
@@ -76,9 +94,9 @@ export function GameOver({ players, onPlayAgain }: GameOverProps) {
                         <div
                           className={`
                             w-16 ${podiumHeights[displayIndex]}
-                            ${displayIndex === 1 
+                            ${actualIndex === 0 
                               ? "bg-gradient-to-t from-amber-600 to-amber-400 border-amber-700" 
-                              : displayIndex === 0 
+                              : actualIndex === 1 
                                 ? "bg-gradient-to-t from-gray-500 to-gray-400 border-gray-600" 
                                 : "bg-gradient-to-t from-orange-700 to-orange-500 border-orange-800"}
                             rounded-t-lg flex items-center justify-center

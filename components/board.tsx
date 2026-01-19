@@ -30,6 +30,8 @@ import { getScaledCoinAmount, calculateAverageCoins } from "@/lib/coin-scaling"
 interface BoardProps {
   players: Player[]
   currentPlayerId: string
+  /** When true, freeze the displayed scaling to prevent visual mismatch during notifications */
+  freezeScaling?: boolean
 }
 
 // ============================================================================
@@ -167,9 +169,15 @@ function getTileLayout(tileId: number): {
 // BOARD COMPONENT
 // ============================================================================
 
-export function Board({ players, currentPlayerId }: BoardProps) {
+export function Board({ players, currentPlayerId, freezeScaling = false }: BoardProps) {
   const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 })
   const previousTileRef = useRef<number | null>(null)
+  
+  /**
+   * Track the last "stable" average for consistent display during notifications.
+   * This prevents visual mismatch where board shows different values than what was awarded.
+   */
+  const frozenAverageRef = useRef<number>(0)
 
   /** Get player's index in the players array (for color assignment) */
   const getPlayerIndex = (playerId: string) => {
@@ -177,13 +185,21 @@ export function Board({ players, currentPlayerId }: BoardProps) {
   }
 
   /** 
-   * Calculate average coins across all players for scaling display
-   * Memoized to prevent recalculation on every render
+   * Calculate average coins across all players for scaling display.
+   * When freezeScaling is true, we use the last frozen value to keep display consistent.
    */
-  const averageCoins = useMemo(
+  const currentAverage = useMemo(
     () => calculateAverageCoins(players),
     [players]
   )
+  
+  // Update frozen average only when not frozen
+  if (!freezeScaling) {
+    frozenAverageRef.current = currentAverage
+  }
+  
+  // Use frozen value when scaling is frozen, otherwise use current
+  const averageCoins = freezeScaling ? frozenAverageRef.current : currentAverage
 
   // Get current player's tile for camera tracking
   const myCurrentTileId = players.find(p => p.id === currentPlayerId)?.currentTileId ?? 0
@@ -356,9 +372,10 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                 // Calculate scaled coin amount for display
                 // Only tiles with effect="coins" show coin amounts
                 // GO (tile 0) doesn't scale, other coin-effect tiles do
-                const hasCoinsEffect = tile.effect === "coins" && tile.coins !== undefined && tile.coins !== 0
+                const baseCoins = tile.coins ?? 0
+                const hasCoinsEffect = tile.effect === "coins" && baseCoins !== 0
                 const displayCoins = hasCoinsEffect
-                  ? (tile.id === 0 ? tile.coins : getScaledCoinAmount(tile.coins, averageCoins))
+                  ? (tile.id === 0 ? baseCoins : getScaledCoinAmount(baseCoins, averageCoins))
                   : 0
 
                 return (

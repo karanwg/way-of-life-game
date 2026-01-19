@@ -361,7 +361,11 @@ export default function Home() {
       >
         <div className="h-full w-full flex gap-3 p-3">
           <div className="h-full relative rounded-2xl overflow-hidden" style={{ width: "75%" }}>
-            <Board players={state.allPlayers} currentPlayerId={state.myPlayerId} />
+            <Board 
+              players={state.allPlayers} 
+              currentPlayerId={state.myPlayerId}
+              freezeScaling={!!state.activeNotification || state.isDiceRolling || state.diceValue !== null}
+            />
 
             {/* Flying Coins */}
             {state.flyingCoins && (
