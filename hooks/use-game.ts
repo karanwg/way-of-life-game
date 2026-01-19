@@ -30,6 +30,9 @@ export function useGame() {
   // Track pending timeouts for cleanup
   const timeoutsRef = useRef<Set<NodeJS.Timeout>>(new Set())
   
+  // Track last die roll for dynamic animation timing
+  const lastDieRollRef = useRef<number>(1)
+  
   // Use a ref to always have the latest store actions without stale closures
   const storeRef = useRef(store)
   storeRef.current = store
@@ -104,6 +107,13 @@ export function useGame() {
         if (event.dieRoll !== null) {
           s.startDiceRoll(event.dieRoll, event.dieRolls)
           
+          // Store die roll for prompt timing calculation
+          lastDieRollRef.current = event.dieRoll
+          
+          // Calculate dynamic delay based on die roll
+          // Animation: 1900ms start delay + (tiles * 450ms per hop) + 400ms buffer
+          const animationDelay = 1900 + (event.dieRoll * 450) + 400
+          
           // Clear dice overlay after dice animation (before pawn finishes moving)
           // Dice shows for ~2s, then we hide it so pawn movement is visible
           scheduleTimeout(() => {
@@ -117,11 +127,11 @@ export function useGame() {
             // Schedule lap bonus notification after dice/movement animation
             scheduleTimeout(() => {
               storeRef.current.showNotification({ type: "lap_bonus", data: event.lapBonus! })
-            }, 5000)
+            }, animationDelay)
           }
           if (event.tileEvent) {
             // Schedule after lap bonus if present, otherwise after animation
-            const tileEventDelay = event.lapBonus ? 5500 : 5000
+            const tileEventDelay = event.lapBonus ? animationDelay + 500 : animationDelay
             scheduleTimeout(() => {
               storeRef.current.showNotification({ type: "tile_event", data: event.tileEvent! })
             }, tileEventDelay)
@@ -134,39 +144,43 @@ export function useGame() {
               if (storeRef.current.state.pendingInteraction === null) {
                 storeRef.current.completeTurn()
               }
-            }, 5000)
+            }, animationDelay)
           }
         }
         break
 
-      case "heist_prompt":
-        // Delay to wait for pawn movement animation, but set BEFORE tile notification
-        // appears so dismissNotificationAndCheckTurn knows an interaction is pending
+      case "heist_prompt": {
+        // Delay based on die roll, but set BEFORE tile notification appears
+        const promptDelay = 1900 + (lastDieRollRef.current * 450) + 200
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("heist", event.data)
-        }, 4800)
+        }, promptDelay)
         break
+      }
 
-      case "ponzi_prompt":
-        // Delay to wait for pawn movement animation, but set BEFORE tile notification
+      case "ponzi_prompt": {
+        const promptDelay = 1900 + (lastDieRollRef.current * 450) + 200
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("ponzi", event.data)
-        }, 4800)
+        }, promptDelay)
         break
+      }
 
-      case "police_prompt":
-        // Delay to wait for pawn movement animation, but set BEFORE tile notification
+      case "police_prompt": {
+        const promptDelay = 1900 + (lastDieRollRef.current * 450) + 200
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("police", event.data)
-        }, 4800)
+        }, promptDelay)
         break
+      }
 
-      case "swap_meet_prompt":
-        // Delay to wait for pawn movement animation, but set BEFORE tile notification
+      case "swap_meet_prompt": {
+        const promptDelay = 1900 + (lastDieRollRef.current * 450) + 200
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("swap_meet", event.data)
-        }, 4800)
+        }, promptDelay)
         break
+      }
 
       case "heist_result": {
         // Only clear pending interaction if I was the thief (the one who made the choice)
