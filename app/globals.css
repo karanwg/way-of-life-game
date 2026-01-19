@@ -182,6 +182,15 @@
     50% { transform: rotate(3deg); }
   }
 
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
   /* Monopoly-style wood texture gradient */
   .wood-texture {
     background: linear-gradient(135deg, #deb887 0%, #d2b48c 50%, #c4a574 100%);

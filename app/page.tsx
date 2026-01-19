@@ -383,6 +383,8 @@ export default function Home() {
             <Board 
               players={state.allPlayers} 
               currentPlayerId={state.myPlayerId}
+              turnPhase={state.turnPhase}
+              isDiceRolling={state.isDiceRolling}
             />
 
             {/* Flying Coins */}
@@ -411,6 +413,7 @@ export default function Home() {
                 </div>
               </div>
             )}
+
 
             {/* Countdown overlay */}
             {state.gamePhase === "countdown" && (

@@ -23,12 +23,18 @@
 
 import { useEffect, useState, useRef } from "react"
 import type { Player } from "@/lib/types"
+import type { TurnPhase } from "@/lib/game-store"
 import { TILES, getTileColors, TILES_PER_SIDE } from "@/lib/board-tiles"
 import { AnimatedPawn } from "@/components/animated-pawn"
+import { DestinationPreview } from "@/components/destination-preview"
 
 interface BoardProps {
   players: Player[]
   currentPlayerId: string
+  /** Current turn phase - used to show destination preview */
+  turnPhase?: TurnPhase
+  /** Whether dice is currently rolling */
+  isDiceRolling?: boolean
 }
 
 // ============================================================================
@@ -166,7 +172,7 @@ function getTileLayout(tileId: number): {
 // BOARD COMPONENT
 // ============================================================================
 
-export function Board({ players, currentPlayerId }: BoardProps) {
+export function Board({ players, currentPlayerId, turnPhase = "idle", isDiceRolling = false }: BoardProps) {
   const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 })
   const previousTileRef = useRef<number | null>(null)
 
@@ -177,6 +183,10 @@ export function Board({ players, currentPlayerId }: BoardProps) {
 
   // Get current player's tile for camera tracking
   const myCurrentTileId = players.find(p => p.id === currentPlayerId)?.currentTileId ?? 0
+  
+  // Show destination preview during movement and tile resolution phases
+  const showDestinationPreview = ["rolling", "moving", "resolving_tile", "awaiting_interaction", "showing_result"].includes(turnPhase)
+  const destinationTileLayout = getTileLayout(myCurrentTileId)
 
   // Calculate camera offset to follow current player
   useEffect(() => {
@@ -375,7 +385,7 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                       `}
                     >
                       <span className="text-3xl leading-none drop-shadow">{tile.emoji}</span>
-                      <span className="text-[11px] font-black text-[#1a1a1a] leading-tight text-center mt-0.5 drop-shadow-sm">
+                      <span className="text-sm font-black text-[#1a1a1a] leading-tight text-center mt-0.5 drop-shadow-sm">
                         {tile.name}
                       </span>
                     </div>
@@ -393,6 +403,33 @@ export function Board({ players, currentPlayerId }: BoardProps) {
                   allPlayers={players}
                 />
               ))}
+
+              {/* Destination Preview - floating above the destination tile */}
+              {showDestinationPreview && (
+                <div
+                  className="absolute z-40 pointer-events-none"
+                  style={{
+                    left: `${destinationTileLayout.centerX}%`,
+                    top: `${destinationTileLayout.centerY}%`,
+                    // Counter-rotate to appear upright (board has rotateX(55deg) rotateZ(-45deg))
+                    // Scale Y by ~3.5 to compensate for the rotateX squish (1/cos(55°) ≈ 1.74)
+                    transform: `
+                      translate(-50%, -50%)
+                      translateY(-250px)
+                      translateX(220px)
+                      rotateZ(45deg)
+                      rotateX(-55deg)
+                      scaleY(2.9)
+                    `,
+                    transformStyle: "preserve-3d",
+                  }}
+                >
+                  <DestinationPreview
+                    tileId={myCurrentTileId}
+                    isVisible={!isDiceRolling}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
