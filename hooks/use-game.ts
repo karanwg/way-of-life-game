@@ -140,46 +140,95 @@ export function useGame() {
         break
 
       case "heist_prompt":
-        s.setPendingInteraction("heist", event.data)
+        // Delay to wait for pawn movement animation, but set BEFORE tile notification
+        // appears so dismissNotificationAndCheckTurn knows an interaction is pending
+        scheduleTimeout(() => {
+          storeRef.current.setPendingInteraction("heist", event.data)
+        }, 3800)
         break
 
       case "ponzi_prompt":
-        s.setPendingInteraction("ponzi", event.data)
+        // Delay to wait for pawn movement animation, but set BEFORE tile notification
+        scheduleTimeout(() => {
+          storeRef.current.setPendingInteraction("ponzi", event.data)
+        }, 3800)
         break
 
       case "police_prompt":
-        s.setPendingInteraction("police", event.data)
+        // Delay to wait for pawn movement animation, but set BEFORE tile notification
+        scheduleTimeout(() => {
+          storeRef.current.setPendingInteraction("police", event.data)
+        }, 3800)
         break
 
       case "swap_meet_prompt":
-        s.setPendingInteraction("swap_meet", event.data)
+        // Delay to wait for pawn movement animation, but set BEFORE tile notification
+        scheduleTimeout(() => {
+          storeRef.current.setPendingInteraction("swap_meet", event.data)
+        }, 3800)
         break
 
-      case "heist_result":
-        s.clearPendingInteraction()
+      case "heist_result": {
+        // Only clear pending interaction if I was the thief (the one who made the choice)
+        // If I'm just the victim, I might have my own pending action that shouldn't be cleared
+        const myId = storeRef.current.state.myPlayerId
+        const isActor = event.data.thiefId === myId
+        if (isActor) {
+          s.clearPendingInteraction()
+        }
         s.updatePlayers(event.allPlayers)
         if (event.data.amountStolen > 0) {
           s.startFlyingCoins(event.data.victimId, event.data.thiefId, event.data.amountStolen)
         }
         scheduleTimeout(() => {
-          storeRef.current.showNotification({ type: "heist_result", data: event.data, isVictim: event.isVictim })
+          const store = storeRef.current
+          const notification = { type: "heist_result" as const, data: event.data, isVictim: event.isVictim }
+          // Queue if victim has pending interaction, otherwise show immediately
+          if (!isActor && store.state.pendingInteraction) {
+            store.queueNotification(notification)
+          } else {
+            store.showNotification(notification)
+          }
         }, 600)
         break
+      }
 
-      case "ponzi_result":
-        s.clearPendingInteraction()
+      case "ponzi_result": {
+        // Ponzi is single-player, always show immediately and clear
+        const myId = storeRef.current.state.myPlayerId
+        if (event.data.playerId === myId) {
+          s.clearPendingInteraction()
+        }
         s.updatePlayers(event.allPlayers)
         s.showNotification({ type: "ponzi_result", data: event.data })
         break
+      }
 
-      case "police_result":
-        s.clearPendingInteraction()
+      case "police_result": {
+        // Only clear if I was the snitch (the one who made the choice)
+        const myId = storeRef.current.state.myPlayerId
+        const isActor = event.data.snitchId === myId
+        if (isActor) {
+          s.clearPendingInteraction()
+        }
         s.updatePlayers(event.allPlayers)
-        s.showNotification({ type: "police_result", data: event.data, isVictim: event.isVictim })
+        const notification = { type: "police_result" as const, data: event.data, isVictim: event.isVictim }
+        // Queue if victim has pending interaction, otherwise show immediately
+        if (!isActor && s.state.pendingInteraction) {
+          s.queueNotification(notification)
+        } else {
+          s.showNotification(notification)
+        }
         break
+      }
 
       case "swap_meet_result": {
-        s.clearPendingInteraction()
+        // Only clear if I was the swapper (the one who made the choice)
+        const myId = storeRef.current.state.myPlayerId
+        const isActor = event.data.swapperId === myId
+        if (isActor) {
+          s.clearPendingInteraction()
+        }
         s.updatePlayers(event.allPlayers)
         const swapResult = event.data
         
@@ -193,7 +242,14 @@ export function useGame() {
             s.startFlyingCoins(swapResult.swapperId, swapResult.targetId, swapResult.swapperOldCoins - swapResult.swapperNewCoins)
           }
           scheduleTimeout(() => {
-            storeRef.current.showNotification({ type: "swap_meet_result", data: event.data, isTarget: event.isTarget })
+            const store = storeRef.current
+            const notification = { type: "swap_meet_result" as const, data: event.data, isTarget: event.isTarget }
+            // Queue if target has pending interaction, otherwise show immediately
+            if (!isActor && store.state.pendingInteraction) {
+              store.queueNotification(notification)
+            } else {
+              store.showNotification(notification)
+            }
           }, 600)
         } else {
           // Skipped - show notification immediately (only to swapper)
@@ -207,20 +263,34 @@ export function useGame() {
       case "identity_theft":
         s.updatePlayers(event.allPlayers)
         scheduleTimeout(() => {
-          storeRef.current.showNotification({ type: "identity_theft", data: event.data })
+          const store = storeRef.current
+          const notification = { type: "identity_theft" as const, data: event.data }
+          // Queue if player has pending interaction
+          if (store.state.pendingInteraction) {
+            store.queueNotification(notification)
+          } else {
+            store.showNotification(notification)
+          }
         }, 4000)
         break
 
       case "impacted_by_event":
         scheduleTimeout(() => {
-          storeRef.current.showNotification({
-            type: "impact_toast",
+          const store = storeRef.current
+          const notification = {
+            type: "impact_toast" as const,
             data: {
               message: `${event.triggeredByName}: ${event.tileName}`,
               coinsDelta: event.coinsDelta,
               triggeredBy: event.triggeredByName,
             },
-          })
+          }
+          // Queue if player has pending interaction
+          if (store.state.pendingInteraction) {
+            store.queueNotification(notification)
+          } else {
+            store.showNotification(notification)
+          }
         }, 4000)
         break
     }

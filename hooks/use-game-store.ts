@@ -105,14 +105,24 @@ export function useGameStore() {
     dispatch({ type: "TURN_COMPLETE" })
   }, [])
 
-  /** Show a notification */
+  /** Show a notification immediately */
   const showNotification = useCallback((notification: NotificationType) => {
     dispatch({ type: "SHOW_NOTIFICATION", notification })
+  }, [])
+
+  /** Queue a notification (shown after pending interaction completes) */
+  const queueNotification = useCallback((notification: NotificationType) => {
+    dispatch({ type: "QUEUE_NOTIFICATION", notification })
   }, [])
 
   /** Dismiss current notification */
   const dismissNotification = useCallback(() => {
     dispatch({ type: "DISMISS_NOTIFICATION" })
+  }, [])
+
+  /** Process notification queue (call after clearing pending interaction) */
+  const processNotificationQueue = useCallback(() => {
+    dispatch({ type: "PROCESS_NOTIFICATION_QUEUE" })
   }, [])
 
   /** Set pending interaction (heist/ponzi/police/swap_meet) */
@@ -171,7 +181,9 @@ export function useGameStore() {
     onMovementComplete,
     completeTurn,
     showNotification,
+    queueNotification,
     dismissNotification,
+    processNotificationQueue,
     setPendingInteraction,
     clearPendingInteraction,
     setView,

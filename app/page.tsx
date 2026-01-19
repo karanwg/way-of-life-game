@@ -383,7 +383,6 @@ export default function Home() {
             <Board 
               players={state.allPlayers} 
               currentPlayerId={state.myPlayerId}
-              freezeScaling={!!state.activeNotification || state.isDiceRolling || state.diceValue !== null}
             />
 
             {/* Flying Coins */}

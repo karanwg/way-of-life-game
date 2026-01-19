@@ -94,6 +94,9 @@ export interface GameState {
   // Current notification (only one at a time)
   activeNotification: NotificationType | null
   
+  // Queued notifications (shown after pending interaction completes)
+  notificationQueue: NotificationType[]
+  
   // Pending interaction (blocks turn progression)
   pendingInteraction: 
     | { type: "heist"; data: HeistPromptData }
@@ -128,6 +131,7 @@ export const initialGameState: GameState = {
   isDiceRolling: false,
   activeView: "quiz",
   activeNotification: null,
+  notificationQueue: [],
   pendingInteraction: null,
   flyingCoins: null,
 }
@@ -161,7 +165,9 @@ export type GameAction =
   
   // Notifications
   | { type: "SHOW_NOTIFICATION"; notification: NotificationType }
+  | { type: "QUEUE_NOTIFICATION"; notification: NotificationType }
   | { type: "DISMISS_NOTIFICATION" }
+  | { type: "PROCESS_NOTIFICATION_QUEUE" }
   
   // Interactions
   | { type: "SET_PENDING_INTERACTION"; interaction: GameState["pendingInteraction"] }
@@ -310,11 +316,40 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         activeNotification: action.notification,
       }
     
-    case "DISMISS_NOTIFICATION":
+    case "QUEUE_NOTIFICATION":
+      return {
+        ...state,
+        notificationQueue: [...state.notificationQueue, action.notification],
+      }
+    
+    case "DISMISS_NOTIFICATION": {
+      // When dismissing, show next queued notification if any (and no pending interaction)
+      const [nextNotification, ...remainingQueue] = state.notificationQueue
+      if (nextNotification && !state.pendingInteraction) {
+        return {
+          ...state,
+          activeNotification: nextNotification,
+          notificationQueue: remainingQueue,
+        }
+      }
       return {
         ...state,
         activeNotification: null,
       }
+    }
+    
+    case "PROCESS_NOTIFICATION_QUEUE": {
+      // Show next queued notification if no active notification and no pending interaction
+      if (state.activeNotification || state.pendingInteraction || state.notificationQueue.length === 0) {
+        return state
+      }
+      const [nextNotification, ...remainingQueue] = state.notificationQueue
+      return {
+        ...state,
+        activeNotification: nextNotification,
+        notificationQueue: remainingQueue,
+      }
+    }
     
     // Interactions
     case "SET_PENDING_INTERACTION":
@@ -324,12 +359,24 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         turnPhase: "awaiting_interaction",
       }
     
-    case "CLEAR_PENDING_INTERACTION":
+    case "CLEAR_PENDING_INTERACTION": {
+      // When clearing interaction, show next queued notification if any
+      const [nextNotification, ...remainingQueue] = state.notificationQueue
+      if (nextNotification && !state.activeNotification) {
+        return {
+          ...state,
+          pendingInteraction: null,
+          turnPhase: "showing_result",
+          activeNotification: nextNotification,
+          notificationQueue: remainingQueue,
+        }
+      }
       return {
         ...state,
         pendingInteraction: null,
         turnPhase: "showing_result",
       }
+    }
     
     // View
     case "SET_VIEW":
