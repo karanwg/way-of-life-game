@@ -380,7 +380,7 @@ export default function Home() {
               players={state.allPlayers} 
               currentPlayerId={state.myPlayerId}
               turnPhase={state.turnPhase}
-              isDiceRolling={state.isDiceRolling}
+              highlightedTileId={state.landedTileId}
             />
 
             {/* Flying Coins */}

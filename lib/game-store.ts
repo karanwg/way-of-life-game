@@ -111,6 +111,9 @@ export interface GameState {
     toPlayerId: string
     amount: number
   } | null
+  
+  // Landed tile ID - set when pawn lands, cleared when turn ends
+  landedTileId: number | null
 }
 
 // ============================================================================
@@ -134,6 +137,7 @@ export const initialGameState: GameState = {
   notificationQueue: [],
   pendingInteraction: null,
   flyingCoins: null,
+  landedTileId: null,
 }
 
 // ============================================================================
@@ -179,6 +183,10 @@ export type GameAction =
   // Animations
   | { type: "START_FLYING_COINS"; fromPlayerId: string; toPlayerId: string; amount: number }
   | { type: "STOP_FLYING_COINS" }
+  
+  // Tile landing highlight
+  | { type: "SET_LANDED_TILE"; tileId: number }
+  | { type: "CLEAR_LANDED_TILE" }
 
 // ============================================================================
 // REDUCER
@@ -307,6 +315,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         isDiceRolling: false,
         activeView: "quiz",
         pendingInteraction: null,
+        landedTileId: null,
       }
     
     // Notifications
@@ -400,6 +409,19 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         flyingCoins: null,
+      }
+    
+    // Tile landing highlight
+    case "SET_LANDED_TILE":
+      return {
+        ...state,
+        landedTileId: action.tileId,
+      }
+    
+    case "CLEAR_LANDED_TILE":
+      return {
+        ...state,
+        landedTileId: null,
       }
     
     default:

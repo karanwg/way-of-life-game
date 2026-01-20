@@ -157,6 +157,16 @@ export function useGameStore() {
     dispatch({ type: "STOP_FLYING_COINS" })
   }, [])
 
+  /** Set landed tile for highlight effect */
+  const setLandedTile = useCallback((tileId: number) => {
+    dispatch({ type: "SET_LANDED_TILE", tileId })
+  }, [])
+
+  /** Clear landed tile highlight */
+  const clearLandedTile = useCallback(() => {
+    dispatch({ type: "CLEAR_LANDED_TILE" })
+  }, [])
+
   return {
     // State
     state,
@@ -189,6 +199,8 @@ export function useGameStore() {
     setView,
     startFlyingCoins,
     stopFlyingCoins,
+    setLandedTile,
+    clearLandedTile,
   }
 }
 

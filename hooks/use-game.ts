@@ -123,15 +123,33 @@ export function useGame() {
           // Determine what happens after dice/movement animation
           const hasNotification = event.lapBonus || event.tileEvent
           
+          // Get the player's destination tile ID
+          const myPlayer = event.allPlayers.find(p => p.id === storeRef.current.state.myPlayerId)
+          const landedTileId = myPlayer?.currentTileId
+          
+          // Set landed tile highlight slightly before pawn fully lands (reduce perceived gap)
+          // Subtract 200ms from animation delay so glow appears as pawn is landing
+          const glowDelay = Math.max(0, animationDelay - 200)
+          if (landedTileId !== undefined && hasNotification) {
+            scheduleTimeout(() => {
+              storeRef.current.setLandedTile(landedTileId)
+            }, glowDelay)
+          }
+          
+          // Add 1 second delay after landing before showing notification
+          const notificationExtraDelay = 1000
+          
           if (event.lapBonus) {
-            // Schedule lap bonus notification after dice/movement animation
+            // Schedule lap bonus notification after landing + glow pause
             scheduleTimeout(() => {
               storeRef.current.showNotification({ type: "lap_bonus", data: event.lapBonus! })
-            }, animationDelay)
+            }, animationDelay + notificationExtraDelay)
           }
           if (event.tileEvent) {
-            // Schedule after lap bonus if present, otherwise after animation
-            const tileEventDelay = event.lapBonus ? animationDelay + 500 : animationDelay
+            // Schedule after lap bonus if present, otherwise after animation + glow pause
+            const tileEventDelay = event.lapBonus 
+              ? animationDelay + notificationExtraDelay + 500 
+              : animationDelay + notificationExtraDelay
             scheduleTimeout(() => {
               storeRef.current.showNotification({ type: "tile_event", data: event.tileEvent! })
             }, tileEventDelay)
@@ -150,8 +168,16 @@ export function useGame() {
         break
 
       case "heist_prompt": {
-        // Delay based on die roll, but set BEFORE tile notification appears
-        const promptDelay = 1900 + (lastDieRollRef.current * 450) + 200
+        // Set tile glow when pawn lands
+        const glowDelay = 1900 + (lastDieRollRef.current * 450)
+        const myPlayer = storeRef.current.state.allPlayers.find(p => p.id === storeRef.current.state.myPlayerId)
+        if (myPlayer?.currentTileId !== undefined) {
+          scheduleTimeout(() => {
+            storeRef.current.setLandedTile(myPlayer.currentTileId)
+          }, glowDelay)
+        }
+        // Show prompt 1 second after glow starts
+        const promptDelay = glowDelay + 1000
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("heist", event.data)
         }, promptDelay)
@@ -159,7 +185,16 @@ export function useGame() {
       }
 
       case "ponzi_prompt": {
-        const promptDelay = 1900 + (lastDieRollRef.current * 450) + 200
+        // Set tile glow when pawn lands
+        const glowDelay = 1900 + (lastDieRollRef.current * 450)
+        const myPlayer = storeRef.current.state.allPlayers.find(p => p.id === storeRef.current.state.myPlayerId)
+        if (myPlayer?.currentTileId !== undefined) {
+          scheduleTimeout(() => {
+            storeRef.current.setLandedTile(myPlayer.currentTileId)
+          }, glowDelay)
+        }
+        // Show prompt 1 second after glow starts
+        const promptDelay = glowDelay + 1000
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("ponzi", event.data)
         }, promptDelay)
@@ -167,7 +202,16 @@ export function useGame() {
       }
 
       case "police_prompt": {
-        const promptDelay = 1900 + (lastDieRollRef.current * 450) + 200
+        // Set tile glow when pawn lands
+        const glowDelay = 1900 + (lastDieRollRef.current * 450)
+        const myPlayer = storeRef.current.state.allPlayers.find(p => p.id === storeRef.current.state.myPlayerId)
+        if (myPlayer?.currentTileId !== undefined) {
+          scheduleTimeout(() => {
+            storeRef.current.setLandedTile(myPlayer.currentTileId)
+          }, glowDelay)
+        }
+        // Show prompt 1 second after glow starts
+        const promptDelay = glowDelay + 1000
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("police", event.data)
         }, promptDelay)
@@ -175,7 +219,16 @@ export function useGame() {
       }
 
       case "swap_meet_prompt": {
-        const promptDelay = 1900 + (lastDieRollRef.current * 450) + 200
+        // Set tile glow when pawn lands
+        const glowDelay = 1900 + (lastDieRollRef.current * 450)
+        const myPlayer = storeRef.current.state.allPlayers.find(p => p.id === storeRef.current.state.myPlayerId)
+        if (myPlayer?.currentTileId !== undefined) {
+          scheduleTimeout(() => {
+            storeRef.current.setLandedTile(myPlayer.currentTileId)
+          }, glowDelay)
+        }
+        // Show prompt 1 second after glow starts
+        const promptDelay = glowDelay + 1000
         scheduleTimeout(() => {
           storeRef.current.setPendingInteraction("swap_meet", event.data)
         }, promptDelay)

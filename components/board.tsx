@@ -26,15 +26,14 @@ import type { Player } from "@/lib/types"
 import type { TurnPhase } from "@/lib/game-store"
 import { TILES, getTileColors, TILES_PER_SIDE } from "@/lib/board-tiles"
 import { AnimatedPawn } from "@/components/animated-pawn"
-import { DestinationPreview } from "@/components/destination-preview"
 
 interface BoardProps {
   players: Player[]
   currentPlayerId: string
-  /** Current turn phase - used to show destination preview */
+  /** Current turn phase */
   turnPhase?: TurnPhase
-  /** Whether dice is currently rolling */
-  isDiceRolling?: boolean
+  /** Tile ID to highlight with glow effect (when showing result) */
+  highlightedTileId?: number | null
 }
 
 // ============================================================================
@@ -172,7 +171,7 @@ function getTileLayout(tileId: number): {
 // BOARD COMPONENT
 // ============================================================================
 
-export function Board({ players, currentPlayerId, turnPhase = "idle", isDiceRolling = false }: BoardProps) {
+export function Board({ players, currentPlayerId, turnPhase = "idle", highlightedTileId }: BoardProps) {
   const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 })
   const previousTileRef = useRef<number | null>(null)
 
@@ -184,10 +183,6 @@ export function Board({ players, currentPlayerId, turnPhase = "idle", isDiceRoll
   // Get current player's tile for camera tracking
   const myCurrentTileId = players.find(p => p.id === currentPlayerId)?.currentTileId ?? 0
   
-  // Show destination preview during movement and tile resolution phases
-  const showDestinationPreview = ["rolling", "moving", "resolving_tile", "awaiting_interaction", "showing_result"].includes(turnPhase)
-  const destinationTileLayout = getTileLayout(myCurrentTileId)
-
   // Calculate camera offset to follow current player
   useEffect(() => {
     const currentLayout = getTileLayout(myCurrentTileId)
@@ -352,42 +347,66 @@ export function Board({ players, currentPlayerId, turnPhase = "idle", isDiceRoll
                 const layout = getTileLayout(tile.id)
                 const colors = getTileColors(tile.colorGroup)
                 const isCorner = layout.isCorner
+                const isHighlighted = highlightedTileId === tile.id
 
                 return (
                   <div
                     key={tile.id}
-                    className="absolute bg-[#e8f5e9] border border-[#1b5e20] flex flex-col overflow-hidden"
+                    className="absolute"
                     style={{
                       left: `${layout.left}%`,
                       top: `${layout.top}%`,
                       width: `${layout.width}%`,
                       height: `${layout.height}%`,
+                      zIndex: isHighlighted ? 20 : 1,
                     }}
                   >
-                    {/* Color band for non-corner tiles */}
-                    {!isCorner && (
-                      <div
-                        className={`${colors.bg} absolute`}
-                        style={{
-                          ...(layout.side === "bottom" ? { top: 0, left: 0, right: 0, height: "40%" } : {}),
-                          ...(layout.side === "top" ? { bottom: 0, left: 0, right: 0, height: "40%" } : {}),
-                          ...(layout.side === "left" ? { right: 0, top: 0, bottom: 0, width: "40%" } : {}),
-                          ...(layout.side === "right" ? { left: 0, top: 0, bottom: 0, width: "40%" } : {}),
-                        }}
+                    {/* Glow ring behind the tile (not clipped) */}
+                    {isHighlighted && (
+                      <div 
+                        className="absolute -inset-2 rounded-lg tile-landing-glow pointer-events-none"
+                        style={{ zIndex: -1 }}
                       />
                     )}
 
-                    {/* Tile content */}
+                    {/* Actual tile */}
                     <div
                       className={`
-                        flex-1 flex flex-col items-center justify-center p-0.5 relative z-10
-                        ${isCorner ? `${colors.bg}` : ""}
+                        absolute inset-0 border flex flex-col overflow-hidden
+                        transition-all duration-300
+                        ${isHighlighted ? 'bg-amber-300 border-amber-500 border-4' : 'bg-[#e8f5e9] border-[#1b5e20]'}
                       `}
                     >
-                      <span className="text-3xl leading-none drop-shadow">{tile.emoji}</span>
-                      <span className="text-sm font-black text-[#1a1a1a] leading-tight text-center mt-0.5 drop-shadow-sm">
-                        {tile.name}
-                      </span>
+                      {/* Bright overlay when highlighted */}
+                      {isHighlighted && (
+                        <div className="absolute inset-0 z-30 pointer-events-none bg-amber-200/30 tile-glow-pulse" />
+                      )}
+
+                      {/* Color band for non-corner tiles */}
+                      {!isCorner && (
+                        <div
+                          className={`${colors.bg} absolute`}
+                          style={{
+                            ...(layout.side === "bottom" ? { top: 0, left: 0, right: 0, height: "40%" } : {}),
+                            ...(layout.side === "top" ? { bottom: 0, left: 0, right: 0, height: "40%" } : {}),
+                            ...(layout.side === "left" ? { right: 0, top: 0, bottom: 0, width: "40%" } : {}),
+                            ...(layout.side === "right" ? { left: 0, top: 0, bottom: 0, width: "40%" } : {}),
+                          }}
+                        />
+                      )}
+
+                      {/* Tile content */}
+                      <div
+                        className={`
+                          flex-1 flex flex-col items-center justify-center p-0.5 relative z-10
+                          ${isCorner ? `${colors.bg}` : ""}
+                        `}
+                      >
+                        <span className={`text-3xl leading-none drop-shadow ${isHighlighted ? 'animate-bounce' : ''}`}>{tile.emoji}</span>
+                        <span className="text-sm font-black text-[#1a1a1a] leading-tight text-center mt-0.5 drop-shadow-sm">
+                          {tile.name}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )
@@ -404,32 +423,6 @@ export function Board({ players, currentPlayerId, turnPhase = "idle", isDiceRoll
                 />
               ))}
 
-              {/* Destination Preview - floating above the destination tile */}
-              {showDestinationPreview && (
-                <div
-                  className="absolute z-40 pointer-events-none"
-                  style={{
-                    left: `${destinationTileLayout.centerX}%`,
-                    top: `${destinationTileLayout.centerY}%`,
-                    // Counter-rotate to appear upright (board has rotateX(55deg) rotateZ(-45deg))
-                    // Scale Y by ~3.5 to compensate for the rotateX squish (1/cos(55°) ≈ 1.74)
-                    transform: `
-                      translate(-50%, -50%)
-                      translateY(-250px)
-                      translateX(220px)
-                      rotateZ(45deg)
-                      rotateX(-55deg)
-                      scaleY(2.9)
-                    `,
-                    transformStyle: "preserve-3d",
-                  }}
-                >
-                  <DestinationPreview
-                    tileId={myCurrentTileId}
-                    isVisible={!isDiceRolling}
-                  />
-                </div>
-              )}
             </div>
           </div>
         </div>

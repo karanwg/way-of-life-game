@@ -102,22 +102,53 @@ export function EventCard({ event, onDismiss }: EventCardProps) {
     <div
       className={`
         fixed inset-0 flex items-center justify-center pointer-events-none z-50
-        transition-all duration-400
+        transition-all duration-500
         ${isVisible ? "opacity-100" : "opacity-0"}
       `}
     >
-      {/* Backdrop */}
-      <div className={`absolute inset-0 bg-green-900/60 backdrop-blur-sm transition-opacity ${isVisible ? "opacity-100" : "opacity-0"}`} />
+      {/* Backdrop with radial glow from bottom */}
+      <div 
+        className={`absolute inset-0 transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}
+        style={{
+          background: isVisible 
+            ? `radial-gradient(ellipse at 50% 100%, ${isPositive ? 'rgba(34, 197, 94, 0.4)' : isNegative ? 'rgba(239, 68, 68, 0.4)' : 'rgba(251, 191, 36, 0.4)'} 0%, rgba(20, 83, 45, 0.7) 50%, rgba(20, 83, 45, 0.85) 100%)`
+            : 'transparent'
+        }}
+      />
+      
+      {/* Rising energy particles */}
+      {isVisible && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-8 rounded-full"
+              style={{
+                left: `${20 + i * 12}%`,
+                bottom: 0,
+                background: `linear-gradient(to top, ${isPositive ? '#22c55e' : isNegative ? '#ef4444' : '#fbbf24'}, transparent)`,
+                animation: `rising-shimmer 1.5s ease-out ${i * 0.1}s infinite`,
+                opacity: 0.6,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Card */}
       <div
         className={`
           pointer-events-auto relative w-[90%] max-w-sm
-          bg-[#FAF8F0] rounded-2xl border-4 border-amber-700/80 shadow-2xl
+          bg-[#FAF8F0] rounded-2xl border-4 shadow-2xl
           overflow-hidden
-          transform transition-all duration-400 ease-out
-          ${isVisible ? "scale-100 translate-y-0" : "scale-90 translate-y-8"}
+          ${isPositive ? 'border-green-500' : isNegative ? 'border-red-500' : 'border-amber-500'}
+          ${isVisible ? "animate-card-rise" : "opacity-0 scale-90 translate-y-8"}
         `}
+        style={{
+          boxShadow: isVisible 
+            ? `0 0 40px ${isPositive ? 'rgba(34, 197, 94, 0.5)' : isNegative ? 'rgba(239, 68, 68, 0.5)' : 'rgba(251, 191, 36, 0.5)'}, 0 25px 50px -12px rgba(0, 0, 0, 0.4)`
+            : 'none'
+        }}
       >
         {/* Header band */}
         <div className={`py-4 px-6 text-center relative ${
