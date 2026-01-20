@@ -94,7 +94,7 @@ function InstructionsScroll() {
               <div className="bg-white rounded-xl p-4 border border-amber-100">
                 <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><span className="text-lg">💰</span> Scoring</h3>
                 <ul className="text-gray-600 text-sm space-y-1">
-                  <li>✅ <strong className="text-green-600">+100 coins</strong> for correct answers</li>
+                  <li>✅ <strong className="text-green-600">+300 coins</strong> for correct answers</li>
                   <li>❌ <strong className="text-red-500">-50 coins</strong> for wrong/timeout</li>
                   <li>🏠 <strong className="text-amber-600">+200 coins</strong> for passing GO</li>
                 </ul>

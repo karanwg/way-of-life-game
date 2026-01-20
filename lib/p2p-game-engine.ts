@@ -173,7 +173,7 @@ export class P2PGameEngine {
     if (!question) return null
 
     const correct = selectedAnswerIndex === question.correctAnswerIndex
-    const coinsDelta = correct ? 100 : -50
+    const coinsDelta = correct ? 300 : 0
     player.coins += coinsDelta
     player.selectedAnswer = selectedAnswerIndex
     player.answered = true

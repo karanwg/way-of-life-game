@@ -9,9 +9,9 @@
  * 5. Advance to next question
  * 
  * SCORING:
- * - Correct answer: +100 coins
- * - Wrong answer: -50 coins
- * - Timer expired: -50 coins (treated as wrong)
+ * - Correct answer: +300 coins
+ * - Wrong answer: +0 coins
+ * - Timer expired: +0 coins (treated as wrong)
  * 
  * FLOW CONTROL:
  * - isActive prop controls whether timer runs
@@ -23,6 +23,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react"
 import { CountdownTimer } from "./countdown-timer"
+import { AnswerResultOverlay } from "./answer-result-overlay"
 import { QUESTIONS } from "@/lib/questions"
 import { playLoseMoneySound } from "@/lib/sounds"
 import type { Player } from "@/lib/types"
@@ -56,27 +57,25 @@ export function QuizScreen({
 }: QuizScreenProps) {
   // UI state
   const [isAnswering, setIsAnswering] = useState(false)
-  const [feedback, setFeedback] = useState<{ correct: boolean; message: string } | null>(null)
   const [timerActive, setTimerActive] = useState(false)
-  const [lastAnswerCorrect, setLastAnswerCorrect] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
+  const [showResultOverlay, setShowResultOverlay] = useState<{ correct: boolean; coins: number } | null>(null)
 
   // Refs for cleanup
-  const feedbackRef = useRef<NodeJS.Timeout | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Current question data
   const currentQuestion = QUESTIONS[player.currentQuestionIndex]
   const isQuizComplete = player.currentQuestionIndex >= QUESTIONS.length
 
-  // Control timer based on active state and feedback
+  // Control timer based on active state and overlay
   useEffect(() => {
-    if (isActive && !feedback && !isLocked) {
+    if (isActive && !showResultOverlay && !isLocked) {
       setTimerActive(true)
     } else if (!isActive) {
       setTimerActive(false)
     }
-  }, [isActive, feedback, isLocked])
+  }, [isActive, showResultOverlay, isLocked])
 
   /**
    * Handle timer expiration
@@ -84,39 +83,28 @@ export function QuizScreen({
    */
   const handleTimeExpired = useCallback(() => {
     setTimerActive(false)
-    setLastAnswerCorrect(false)
     playLoseMoneySound()
-    setFeedback({ correct: false, message: "Time expired! -50 coins" })
+    // Show dramatic overlay for timeout
+    setShowResultOverlay({ correct: false, coins: 0 })
   }, [])
 
   /**
-   * Auto-advance after feedback is shown
+   * Handle overlay completion - advance to next question
    */
-  useEffect(() => {
-    if (!feedback) return
-    
-    const delay = feedback.correct ? 1500 : 2000
-    
-    // Lock interaction after wrong answer
-    if (!feedback.correct) {
-      setIsLocked(true)
+  const handleOverlayComplete = useCallback(() => {
+    if (showResultOverlay) {
+      const wasCorrect = showResultOverlay.correct
+      setShowResultOverlay(null)
+      handleNextQuestion(wasCorrect)
     }
-    
-    feedbackRef.current = setTimeout(() => {
-      handleNextQuestion(feedback.correct)
-    }, delay)
-    
-    return () => {
-      if (feedbackRef.current) clearTimeout(feedbackRef.current)
-    }
-  }, [feedback])
+  }, [showResultOverlay])
 
   /**
    * Handle answer selection
    */
   const handleSelectAnswer = async (answerIndex: number) => {
     // Guard against invalid clicks
-    if (isAnswering || !timerActive || player.answered || feedback !== null) {
+    if (isAnswering || !timerActive || player.answered || showResultOverlay !== null) {
       return
     }
 
@@ -131,15 +119,11 @@ export function QuizScreen({
       
       if (!correct) playLoseMoneySound()
       
-      setLastAnswerCorrect(correct)
-      setFeedback({
-        correct,
-        message: correct ? `Correct! +100 coins` : `Wrong! -50 coins`,
-      })
+      // Show dramatic overlay instead of inline feedback
+      setShowResultOverlay({ correct, coins: correct ? 300 : 0 })
     } catch (error) {
       console.error("Error submitting answer:", error)
-      setLastAnswerCorrect(false)
-      setFeedback({ correct: false, message: "Error submitting answer." })
+      setShowResultOverlay({ correct: false, coins: 0 })
       onSessionExpired?.()
     } finally {
       setIsAnswering(false)
@@ -152,7 +136,6 @@ export function QuizScreen({
    */
   const handleNextQuestion = async (wasCorrect: boolean) => {
     // Clear any pending timeouts
-    if (feedbackRef.current) clearTimeout(feedbackRef.current)
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
     try {
@@ -169,7 +152,6 @@ export function QuizScreen({
           // Then hide dice and reset for next question
           setTimeout(() => {
             onDiceRoll?.(null, false)
-            setFeedback(null)
             setTimerActive(true)
             setIsLocked(false)
           }, 1000)
@@ -177,7 +159,6 @@ export function QuizScreen({
       } else {
         // No dice roll (wrong answer) - just reset
         onDiceRoll?.(null, false)
-        setFeedback(null)
         setTimerActive(true)
         setIsLocked(false)
       }
@@ -259,7 +240,7 @@ export function QuizScreen({
           <button
             key={index}
             onClick={() => handleSelectAnswer(index)}
-            disabled={isAnswering || !timerActive || player.answered || feedback !== null || isLocked}
+            disabled={isAnswering || !timerActive || player.answered || showResultOverlay !== null || isLocked}
             className={`
               relative rounded-xl p-4
               bg-gradient-to-b ${BUTTON_STYLES[index]}
@@ -280,23 +261,13 @@ export function QuizScreen({
         ))}
       </div>
 
-      {/* Feedback message */}
-      {feedback && (
-        <div
-          className={`
-            p-4 rounded-xl text-center font-bold border-2 shadow-sm
-            ${feedback.correct
-              ? "bg-green-50 border-green-400 text-green-700"
-              : "bg-red-50 border-red-400 text-red-700"
-            }
-          `}
-        >
-          <span className="mr-2">{feedback.correct ? "✅" : "❌"}</span>
-          {feedback.message}
-          {!feedback.correct && isLocked && (
-            <span className="ml-2 opacity-60 text-xs">(locked for 2s)</span>
-          )}
-        </div>
+      {/* Answer Result Overlay */}
+      {showResultOverlay && (
+        <AnswerResultOverlay
+          isCorrect={showResultOverlay.correct}
+          coins={showResultOverlay.coins}
+          onComplete={handleOverlayComplete}
+        />
       )}
     </div>
   )
