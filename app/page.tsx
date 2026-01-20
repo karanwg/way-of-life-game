@@ -231,7 +231,8 @@ export default function Home() {
   /** Render the pending interaction modal */
   const renderInteraction = () => {
     const interaction = state.pendingInteraction
-    if (!interaction) return null
+    // Only show modal when interaction is ready (after pawn lands)
+    if (!interaction || !state.interactionReady) return null
 
     // TypeScript discriminated union - type narrowing works here
     if (interaction.type === "heist") {
@@ -366,10 +367,10 @@ export default function Home() {
         </span>
       </button>
 
-      {/* Board View */}
+      {/* Board View - also visible when there's a pending interaction (modals appear over board) */}
       <div
         className={`absolute inset-0 transition-all duration-500 ease-in-out ${
-          state.activeView === "board" 
+          state.activeView === "board" || state.pendingInteraction
             ? "opacity-100 pointer-events-auto" 
             : "opacity-0 pointer-events-none"
         }`}
@@ -425,10 +426,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Quiz View */}
+      {/* Quiz View - hidden when there's a pending interaction (like ponzi/heist modals) */}
       <div
         className={`absolute inset-0 transition-all duration-500 ease-in-out ${
-          state.activeView === "quiz" 
+          state.activeView === "quiz" && !state.pendingInteraction
             ? "opacity-100 pointer-events-auto" 
             : "opacity-0 pointer-events-none"
         }`}

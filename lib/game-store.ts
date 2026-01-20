@@ -105,6 +105,9 @@ export interface GameState {
     | { type: "swap_meet"; data: SwapMeetPromptData }
     | null
   
+  // Whether the pending interaction modal should be shown (set after pawn lands)
+  interactionReady: boolean
+  
   // Flying coins animation
   flyingCoins: {
     fromPlayerId: string
@@ -136,6 +139,7 @@ export const initialGameState: GameState = {
   activeNotification: null,
   notificationQueue: [],
   pendingInteraction: null,
+  interactionReady: false,
   flyingCoins: null,
   landedTileId: null,
 }
@@ -175,6 +179,7 @@ export type GameAction =
   
   // Interactions
   | { type: "SET_PENDING_INTERACTION"; interaction: GameState["pendingInteraction"] }
+  | { type: "SET_INTERACTION_READY" }
   | { type: "CLEAR_PENDING_INTERACTION" }
   
   // View
@@ -365,7 +370,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         pendingInteraction: action.interaction,
+        interactionReady: false, // Modal not ready yet, wait for pawn to land
         turnPhase: "awaiting_interaction",
+        activeView: "board", // Keep board visible for interaction modals
+      }
+    
+    case "SET_INTERACTION_READY":
+      return {
+        ...state,
+        interactionReady: true, // Now show the modal
       }
     
     case "CLEAR_PENDING_INTERACTION": {
@@ -375,6 +388,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         return {
           ...state,
           pendingInteraction: null,
+          interactionReady: false,
           turnPhase: "showing_result",
           activeNotification: nextNotification,
           notificationQueue: remainingQueue,
@@ -383,6 +397,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         pendingInteraction: null,
+        interactionReady: false,
         turnPhase: "showing_result",
       }
     }

@@ -10,8 +10,8 @@
  * - Host processes actions and broadcasts results to all players
  * 
  * TURN FLOW:
- * 1. Player answers a question (correct = +100 coins, wrong = -50 coins)
- * 2. If correct, player rolls dice and moves
+ * 1. Player answers a question (correct = +300 coins, wrong = +0 coins)
+ * 2. Player always rolls dice and moves (regardless of answer)
  * 3. Lap bonus applied if player passes GO
  * 4. Tile effect applied (may trigger interactive prompt)
  * 5. If no interactive prompt, check for identity theft event
@@ -208,13 +208,8 @@ export class P2PGameEngine {
       tileEvent: null,
     }
 
-    // Wrong answer - just advance question, no movement
-    if (!wasCorrect) {
-      player.currentQuestionIndex += 1
-      player.answered = false
-      player.selectedAnswer = null
-      return result
-    }
+    // Player always moves, regardless of answer correctness
+    // (coins are awarded separately based on correctness)
 
     // Step 1: Roll die and move
     const dieRoll = rollDie(6)

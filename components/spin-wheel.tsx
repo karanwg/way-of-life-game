@@ -15,6 +15,7 @@ import { useState, useCallback } from "react"
 
 interface SpinWheelProps {
   onResult: (won: boolean) => void
+  onSpinStart?: () => void
   disabled?: boolean
 }
 
@@ -35,7 +36,7 @@ const SECTIONS = [
 const SECTION_ANGLE = 360 / SECTIONS.length // 45 degrees each
 const WHEEL_SIZE = 240
 
-export function SpinWheel({ onResult, disabled }: SpinWheelProps) {
+export function SpinWheel({ onResult, onSpinStart, disabled }: SpinWheelProps) {
   const [isSpinning, setIsSpinning] = useState(false)
   const [rotation, setRotation] = useState(0)
   const [hasSpun, setHasSpun] = useState(false)
@@ -45,6 +46,7 @@ export function SpinWheel({ onResult, disabled }: SpinWheelProps) {
 
     setIsSpinning(true)
     setHasSpun(true)
+    onSpinStart?.()
 
     // Determine outcome: 75% WIN, 25% LOSE
     const won = Math.random() < 0.75
@@ -83,7 +85,7 @@ export function SpinWheel({ onResult, disabled }: SpinWheelProps) {
       setIsSpinning(false)
       onResult(won)
     }, 4000)
-  }, [isSpinning, disabled, hasSpun, rotation, onResult])
+  }, [isSpinning, disabled, hasSpun, rotation, onResult, onSpinStart])
 
   // Create wheel sections as SVG paths
   const createWheelSection = (index: number) => {

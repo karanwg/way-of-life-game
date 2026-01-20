@@ -138,6 +138,11 @@ export function useGameStore() {
     dispatch({ type: "CLEAR_PENDING_INTERACTION" })
   }, [])
 
+  /** Set interaction ready (show the modal after pawn lands) */
+  const setInteractionReady = useCallback(() => {
+    dispatch({ type: "SET_INTERACTION_READY" })
+  }, [])
+
   /** Switch active view */
   const setView = useCallback((view: "quiz" | "board") => {
     dispatch({ type: "SET_VIEW", view })
@@ -195,6 +200,7 @@ export function useGameStore() {
     dismissNotification,
     processNotificationQueue,
     setPendingInteraction,
+    setInteractionReady,
     clearPendingInteraction,
     setView,
     startFlyingCoins,

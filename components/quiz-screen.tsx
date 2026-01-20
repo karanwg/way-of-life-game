@@ -4,14 +4,18 @@
  * This component handles the question-answer flow:
  * 1. Display current question with countdown timer
  * 2. Player selects an answer (or timer expires)
- * 3. Show feedback (correct/wrong)
- * 4. If correct: Roll dice and move (handled by parent)
+ * 3. Show dramatic feedback overlay (correct/wrong)
+ * 4. Roll dice and move (regardless of answer correctness)
  * 5. Advance to next question
  * 
  * SCORING:
  * - Correct answer: +300 coins
  * - Wrong answer: +0 coins
  * - Timer expired: +0 coins (treated as wrong)
+ * 
+ * MOVEMENT:
+ * - Players always roll dice and move after answering
+ * - Both correct and wrong answers trigger movement
  * 
  * FLOW CONTROL:
  * - isActive prop controls whether timer runs
@@ -59,7 +63,7 @@ export function QuizScreen({
   const [isAnswering, setIsAnswering] = useState(false)
   const [timerActive, setTimerActive] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
-  const [showResultOverlay, setShowResultOverlay] = useState<{ correct: boolean; coins: number } | null>(null)
+  const [showResultOverlay, setShowResultOverlay] = useState<{ correct: boolean; coins: number; coinsBefore: number } | null>(null)
 
   // Refs for cleanup
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -84,9 +88,9 @@ export function QuizScreen({
   const handleTimeExpired = useCallback(() => {
     setTimerActive(false)
     playLoseMoneySound()
-    // Show dramatic overlay for timeout
-    setShowResultOverlay({ correct: false, coins: 0 })
-  }, [])
+    // Show dramatic overlay for timeout (coins don't change, so coinsBefore = current)
+    setShowResultOverlay({ correct: false, coins: 0, coinsBefore: player.coins })
+  }, [player.coins])
 
   /**
    * Handle overlay completion - advance to next question
@@ -111,6 +115,9 @@ export function QuizScreen({
     setIsAnswering(true)
     setTimerActive(false)
 
+    // Capture coins BEFORE the answer is processed
+    const coinsBefore = player.coins
+
     try {
       const question = QUESTIONS[player.currentQuestionIndex]
       const correct = question ? answerIndex === question.correctAnswerIndex : false
@@ -119,11 +126,11 @@ export function QuizScreen({
       
       if (!correct) playLoseMoneySound()
       
-      // Show dramatic overlay instead of inline feedback
-      setShowResultOverlay({ correct, coins: correct ? 300 : 0 })
+      // Show dramatic overlay with the coins from BEFORE the answer
+      setShowResultOverlay({ correct, coins: correct ? 300 : 0, coinsBefore })
     } catch (error) {
       console.error("Error submitting answer:", error)
-      setShowResultOverlay({ correct: false, coins: 0 })
+      setShowResultOverlay({ correct: false, coins: 0, coinsBefore })
       onSessionExpired?.()
     } finally {
       setIsAnswering(false)
@@ -132,7 +139,7 @@ export function QuizScreen({
 
   /**
    * Advance to the next question
-   * If answer was correct, triggers dice roll and movement
+   * Always triggers dice roll and movement (regardless of answer correctness)
    */
   const handleNextQuestion = async (wasCorrect: boolean) => {
     // Clear any pending timeouts
@@ -141,7 +148,8 @@ export function QuizScreen({
     try {
       const result = await onNextQuestion(wasCorrect)
       
-      if (wasCorrect && result.dieRoll !== null) {
+      // Always show dice roll and move (both correct and wrong answers)
+      if (result.dieRoll !== null) {
         // Show dice rolling animation
         onDiceRoll?.(result.dieRoll, true, result.dieRolls)
         
@@ -157,7 +165,7 @@ export function QuizScreen({
           }, 1000)
         }, 700)
       } else {
-        // No dice roll (wrong answer) - just reset
+        // No dice roll (shouldn't happen normally) - just reset
         onDiceRoll?.(null, false)
         setTimerActive(true)
         setIsLocked(false)
@@ -266,6 +274,7 @@ export function QuizScreen({
         <AnswerResultOverlay
           isCorrect={showResultOverlay.correct}
           coins={showResultOverlay.coins}
+          currentCoins={showResultOverlay.coinsBefore}
           onComplete={handleOverlayComplete}
         />
       )}

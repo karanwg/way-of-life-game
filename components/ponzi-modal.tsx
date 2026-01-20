@@ -35,6 +35,10 @@ export function PonziModal({ data, onChoice }: PonziModalProps) {
     }, 2000)
   }, [onChoice])
 
+  const handleSpinStart = useCallback(() => {
+    setState("spinning")
+  }, [])
+
   const handleSkip = useCallback(() => {
     if (state === "spinning") return
     onChoice(false)
@@ -62,6 +66,7 @@ export function PonziModal({ data, onChoice }: PonziModalProps) {
           <div className="flex justify-center">
             <SpinWheel 
               onResult={handleSpinResult}
+              onSpinStart={handleSpinStart}
               disabled={state !== "initial"}
             />
           </div>

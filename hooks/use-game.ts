@@ -168,6 +168,9 @@ export function useGame() {
         break
 
       case "heist_prompt": {
+        // Set pending interaction IMMEDIATELY to prevent view switch to quiz
+        storeRef.current.setPendingInteraction("heist", event.data)
+        
         // Set tile glow when pawn lands
         const glowDelay = 1900 + (lastDieRollRef.current * 450)
         const myPlayer = storeRef.current.state.allPlayers.find(p => p.id === storeRef.current.state.myPlayerId)
@@ -176,15 +179,18 @@ export function useGame() {
             storeRef.current.setLandedTile(myPlayer.currentTileId)
           }, glowDelay)
         }
-        // Show prompt 1 second after glow starts
-        const promptDelay = glowDelay + 1000
+        // Show modal 1 second after pawn lands
+        const modalDelay = glowDelay + 1000
         scheduleTimeout(() => {
-          storeRef.current.setPendingInteraction("heist", event.data)
-        }, promptDelay)
+          storeRef.current.setInteractionReady()
+        }, modalDelay)
         break
       }
 
       case "ponzi_prompt": {
+        // Set pending interaction IMMEDIATELY to prevent view switch to quiz
+        storeRef.current.setPendingInteraction("ponzi", event.data)
+        
         // Set tile glow when pawn lands
         const glowDelay = 1900 + (lastDieRollRef.current * 450)
         const myPlayer = storeRef.current.state.allPlayers.find(p => p.id === storeRef.current.state.myPlayerId)
@@ -193,15 +199,18 @@ export function useGame() {
             storeRef.current.setLandedTile(myPlayer.currentTileId)
           }, glowDelay)
         }
-        // Show prompt 1 second after glow starts
-        const promptDelay = glowDelay + 1000
+        // Show modal 1 second after pawn lands (after glow is visible)
+        const modalDelay = glowDelay + 1000
         scheduleTimeout(() => {
-          storeRef.current.setPendingInteraction("ponzi", event.data)
-        }, promptDelay)
+          storeRef.current.setInteractionReady()
+        }, modalDelay)
         break
       }
 
       case "police_prompt": {
+        // Set pending interaction IMMEDIATELY to prevent view switch to quiz
+        storeRef.current.setPendingInteraction("police", event.data)
+        
         // Set tile glow when pawn lands
         const glowDelay = 1900 + (lastDieRollRef.current * 450)
         const myPlayer = storeRef.current.state.allPlayers.find(p => p.id === storeRef.current.state.myPlayerId)
@@ -210,15 +219,18 @@ export function useGame() {
             storeRef.current.setLandedTile(myPlayer.currentTileId)
           }, glowDelay)
         }
-        // Show prompt 1 second after glow starts
-        const promptDelay = glowDelay + 1000
+        // Show modal 1 second after pawn lands
+        const modalDelay = glowDelay + 1000
         scheduleTimeout(() => {
-          storeRef.current.setPendingInteraction("police", event.data)
-        }, promptDelay)
+          storeRef.current.setInteractionReady()
+        }, modalDelay)
         break
       }
 
       case "swap_meet_prompt": {
+        // Set pending interaction IMMEDIATELY to prevent view switch to quiz
+        storeRef.current.setPendingInteraction("swap_meet", event.data)
+        
         // Set tile glow when pawn lands
         const glowDelay = 1900 + (lastDieRollRef.current * 450)
         const myPlayer = storeRef.current.state.allPlayers.find(p => p.id === storeRef.current.state.myPlayerId)
@@ -227,11 +239,11 @@ export function useGame() {
             storeRef.current.setLandedTile(myPlayer.currentTileId)
           }, glowDelay)
         }
-        // Show prompt 1 second after glow starts
-        const promptDelay = glowDelay + 1000
+        // Show modal 1 second after pawn lands
+        const modalDelay = glowDelay + 1000
         scheduleTimeout(() => {
-          storeRef.current.setPendingInteraction("swap_meet", event.data)
-        }, promptDelay)
+          storeRef.current.setInteractionReady()
+        }, modalDelay)
         break
       }
 
