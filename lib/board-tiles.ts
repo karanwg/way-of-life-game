@@ -12,7 +12,7 @@
  * Players move clockwise starting from GO (tile 0).
  * 
  * TILE TYPES:
- * - Corner tiles (0, 6, 12, 18): Special tiles like GO, Police Station
+ * - Corner tiles (0, 6, 12, 18): Special tiles like GO, Penalty Pick
  * - Regular tiles: Properties, events, chances
  * 
  * EFFECTS:
@@ -84,10 +84,10 @@ export interface Tile {
 }
 
 // 24 tiles - 6 per side, Monopoly-style layout
-// Corners are at positions: 0 (GO), 6 (Jail/Visiting), 12 (Free Parking), 18 (Police)
+// Corners are at positions: 0 (GO), 6 (Jail/Visiting), 12 (Free Bonus), 18 (Police)
 // Bottom row (0-5): GO at corner, then 5 properties going right
 // Right column (6-11): Jail at corner, then 5 properties going up
-// Top row (12-17): Free Parking at corner, then 5 properties going left
+// Top row (12-17): Free Bonus at corner, then 5 properties going left
 // Left column (18-23): Police at corner, then 5 properties going down
 
 export const TILES: Tile[] = [
@@ -103,7 +103,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 1,
-    name: "Coin Magnet",
+    name: "Class Tax",
     effect: "coin_magnet",
     coins: 0,
     text: "🧲 Magnetic personality! Steal 20 coins from EACH player!",
@@ -112,7 +112,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 2,
-    name: "Party Time!",
+    name: "Class Bonus",
     effect: "party_time",
     coins: 0,
     text: "🎉 PARTY! Everyone gets 50 coins!",
@@ -121,7 +121,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 3,
-    name: "Thrift Store",
+    name: "Small Expense",
     effect: "coins",
     coins: -30,
     text: "Couldn't resist a deal. -30 coins",
@@ -130,7 +130,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 4,
-    name: "Tax Collector",
+    name: "Class Tax",
     effect: "tax_collector",
     coins: 0,
     text: "💸 You're the tax man! Take 25 coins from EVERYONE!",
@@ -139,7 +139,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 5,
-    name: "Train Station",
+    name: "Quick Cash",
     effect: "coins",
     coins: 50,
     text: "Smooth travels! +50 coins",
@@ -150,7 +150,7 @@ export const TILES: Tile[] = [
   // === RIGHT COLUMN (tiles 6-11) ===
   {
     id: 6,
-    name: "Just Visiting",
+    name: "No Effect",
     effect: "none",
     coins: 0,
     text: "Just visiting. Enjoy the view!",
@@ -159,12 +159,12 @@ export const TILES: Tile[] = [
   },
   {
     id: 7,
-    name: "Banana Peel",
-    effect: "banana_peel",
-    coins: 0,
-    text: "🍌 SLIP! Push a random player back 3 spaces!",
-    colorGroup: "lightBlue",
-    emoji: "🍌",
+    name: "Big Expense",
+    effect: "coins",
+    coins: -200,
+    text: "Living large costs!",
+    colorGroup: "tax",
+    emoji: "💎",
   },
   {
     id: 8,
@@ -177,7 +177,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 9,
-    name: "Chance",
+    name: "Fortune Wheel",
     effect: "ponzi",
     coins: 0,
     text: "75% double, 25% lose half!",
@@ -186,7 +186,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 10,
-    name: "Bakery",
+    name: "Quick Cash",
     effect: "coins",
     coins: 80,
     text: "Sweet profits! +80 coins",
@@ -206,7 +206,7 @@ export const TILES: Tile[] = [
   // === TOP ROW (tiles 12-17) ===
   {
     id: 12,
-    name: "Free Parking",
+    name: "Free Bonus",
     effect: "coins",
     coins: 100,
     text: "Lucky! Free money! +100 coins",
@@ -233,7 +233,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 15,
-    name: "Money Bomb",
+    name: "Everyone Pays",
     effect: "money_bomb",
     coins: 0,
     text: "💣 BOOM! Everyone else loses 50 coins!",
@@ -242,7 +242,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 16,
-    name: "Slot Machine",
+    name: "Fortune Wheel",
     effect: "ponzi",
     coins: 0,
     text: "75% double, 25% lose half!",
@@ -251,7 +251,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 17,
-    name: "Casino",
+    name: "Fortune Wheel",
     effect: "ponzi",
     coins: 0,
     text: "75% double, 25% lose half!",
@@ -262,7 +262,7 @@ export const TILES: Tile[] = [
   // === LEFT COLUMN (tiles 18-23) ===
   {
     id: 18,
-    name: "Police Station",
+    name: "Penalty Pick",
     effect: "police_station",
     coins: 0,
     text: "🚔 Snitch! Someone loses 300 coins!",
@@ -271,7 +271,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 19,
-    name: "Ice Cream Truck",
+    name: "Quick Cash",
     effect: "coins",
     coins: 90,
     text: "Cool profits! +90 coins",
@@ -289,7 +289,7 @@ export const TILES: Tile[] = [
   },
   {
     id: 21,
-    name: "Chance",
+    name: "Fortune Wheel",
     effect: "ponzi",
     coins: 0,
     text: "75% double, 25% lose half!",
@@ -298,19 +298,19 @@ export const TILES: Tile[] = [
   },
   {
     id: 22,
-    name: "Luxury Tax",
+    name: "Big Expense",
     effect: "coins",
-    coins: -75,
-    text: "Living large costs! -75 coins",
+    coins: -200,
+    text: "Living large costs!",
     colorGroup: "tax",
     emoji: "💎",
   },
   {
     id: 23,
-    name: "Lemonade Stand",
+    name: "Quick Cash",
     effect: "coins",
     coins: 60,
-    text: "Refreshing sales! +60 coins",
+    text: "Refreshing sales, sweet profits!",
     colorGroup: "yellow",
     emoji: "🍋",
   },
