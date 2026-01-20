@@ -396,11 +396,11 @@ export function useGame() {
   }, [])
 
   /** Make a choice on the ponzi/gamble tile */
-  const makePonziChoice = useCallback((invest: boolean) => {
+  const makePonziChoice = useCallback((invest: boolean, spinResult?: boolean) => {
     if (hostRef.current) {
-      hostRef.current.makePonziChoice(invest)
+      hostRef.current.makePonziChoice(invest, spinResult)
     } else if (guestRef.current) {
-      guestRef.current.makePonziChoice(invest)
+      guestRef.current.makePonziChoice(invest, spinResult)
     }
   }, [])
 

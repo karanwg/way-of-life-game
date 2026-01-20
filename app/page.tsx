@@ -141,25 +141,21 @@ export default function Home() {
 
       case "ponzi_result": {
         const ponzi = notification.data
-        const won = ponzi.won === true
-        const coinsChange = ponzi.coinsChange || 0
         
-        // Build the event card data based on ponzi result
-        let tileText: string
-        if (!ponzi.invested) {
-          tileText = "You played it safe and walked away."
-        } else if (won) {
-          tileText = `🎰 JACKPOT! You doubled your bet and won ${coinsChange} coins!`
-        } else {
-          tileText = `💸 Ouch! The scheme collapsed and you lost ${Math.abs(coinsChange)} coins!`
+        // If they gambled, the spin wheel already showed the result - auto-dismiss
+        if (ponzi.invested) {
+          // Auto-dismiss since the spin wheel modal already showed the result
+          setTimeout(() => game.dismissNotification(), 0)
+          return null
         }
         
+        // Only show event card if they walked away (skipped gambling)
         return (
           <EventCard
             event={{
-              tileName: won ? "🎉 Ponzi Scheme - WIN!" : ponzi.invested ? "💔 Ponzi Scheme - LOSS" : "Ponzi Scheme",
-              tileText,
-              coinsDelta: coinsChange,
+              tileName: "Fortune Wheel",
+              tileText: "You played it safe and walked away.",
+              coinsDelta: 0,
               isGlobal: false,
             }}
             onDismiss={game.dismissNotification}

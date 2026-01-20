@@ -223,6 +223,46 @@
   .animate-float-up { animation: float-up 2s ease-out forwards; }
   .animate-wiggle { animation: wiggle 0.5s ease-in-out infinite; }
 
+  /* Spin wheel glow effect */
+  @keyframes wheel-glow {
+    0%, 100% { 
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.5),
+                  0 0 40px rgba(251, 191, 36, 0.3),
+                  0 0 60px rgba(251, 191, 36, 0.2);
+    }
+    50% { 
+      box-shadow: 0 0 30px rgba(251, 191, 36, 0.7),
+                  0 0 60px rgba(251, 191, 36, 0.5),
+                  0 0 90px rgba(251, 191, 36, 0.3);
+    }
+  }
+
+  .spin-wheel-glow {
+    border-radius: 9999px;
+    animation: wheel-glow 2s ease-in-out infinite;
+  }
+
+  .spin-wheel-glow:hover {
+    animation: wheel-glow 0.8s ease-in-out infinite;
+    filter: brightness(1.1);
+  }
+
+  /* Sparkle particles around wheel */
+  @keyframes sparkle-float {
+    0% { 
+      transform: translate(0, 0) scale(0);
+      opacity: 0;
+    }
+    50% { 
+      opacity: 1;
+      transform: translate(var(--tx, 10px), var(--ty, -10px)) scale(1);
+    }
+    100% { 
+      transform: translate(calc(var(--tx, 10px) * 2), calc(var(--ty, -10px) * 2)) scale(0);
+      opacity: 0;
+    }
+  }
+
   /* Fun shadows */
   .shadow-playful {
     box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.2),

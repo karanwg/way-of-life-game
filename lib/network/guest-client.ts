@@ -300,9 +300,9 @@ export class GuestClient {
   }
 
   /** Make ponzi choice */
-  makePonziChoice(invest: boolean) {
+  makePonziChoice(invest: boolean, spinResult?: boolean) {
     if (!this.myPlayerId) return
-    this.send({ type: "PONZI_CHOICE", playerId: this.myPlayerId, invest })
+    this.send({ type: "PONZI_CHOICE", playerId: this.myPlayerId, invest, spinResult })
   }
 
   /** Select police target */

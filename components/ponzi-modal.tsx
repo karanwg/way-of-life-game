@@ -2,113 +2,107 @@
  * PonziModal - Gamble decision modal for chance/casino tiles
  * 
  * Shown when a player lands on a Ponzi/gamble tile.
- * Player can choose to:
- * - Gamble: 75% chance to double coins, 25% chance to lose half
- * - Skip: Continue without gambling
- * 
- * The modal shows the potential gains/losses based on current coin count.
+ * Features a spin wheel that the player can click to spin.
+ * The game is rigged - 75% chance to win (double coins), 25% chance to lose half.
  */
 
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import type { PonziPromptData } from "@/lib/p2p-types"
+import { SpinWheel } from "./spin-wheel"
 
 interface PonziModalProps {
   data: PonziPromptData
-  onChoice: (invest: boolean) => void
+  onChoice: (invest: boolean, spinResult?: boolean) => void
 }
 
+type ModalState = "initial" | "spinning" | "result"
+
 export function PonziModal({ data, onChoice }: PonziModalProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [state, setState] = useState<ModalState>("initial")
+  const [spinResult, setSpinResult] = useState<boolean | null>(null)
 
-  const handleChoice = (invest: boolean) => {
-    if (!isSubmitting) {
-      setIsSubmitting(true)
-      onChoice(invest)
-    }
-  }
-
-  const potentialGain = data.currentCoins // Doubling means gaining same amount
+  const potentialGain = data.currentCoins
   const potentialLoss = Math.floor(data.currentCoins / 2)
 
+  const handleSpinResult = useCallback((won: boolean) => {
+    setSpinResult(won)
+    setState("result")
+    // Small delay to show result before closing
+    setTimeout(() => {
+      onChoice(true, won)
+    }, 2000)
+  }, [onChoice])
+
+  const handleSkip = useCallback(() => {
+    if (state === "spinning") return
+    onChoice(false)
+  }, [state, onChoice])
+
   return (
-    <div className="fixed inset-0 bg-emerald-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white border-4 border-purple-400 rounded-2xl p-6 max-w-md w-full shadow-playful animate-bounce-in">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-gradient-to-b from-gray-900 via-gray-850 to-gray-900 border-4 border-amber-500 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-bounce-in relative">
+        {/* Decorative corner lights */}
+        <div className="absolute top-3 left-3 w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+        <div className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" style={{ animationDelay: '0.3s' }} />
+        <div className="absolute bottom-3 left-3 w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: '0.6s' }} />
+        <div className="absolute bottom-3 right-3 w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse" style={{ animationDelay: '0.9s' }} />
+        
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="text-5xl mb-2 animate-wiggle">🎰</div>
-          <h2 className="text-2xl font-black text-purple-600">
-            Chance Card!
+          <div className="text-4xl mb-2">🎰</div>
+          <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400">
+            FORTUNE WHEEL
           </h2>
-          <p className="text-purple-700 mt-2 font-medium">
-            Take a gamble on your fortune...
-          </p>
         </div>
 
-        {/* Current coins display */}
-        <div className="bg-amber-100 border-2 border-amber-300 rounded-xl p-4 mb-6 text-center">
-          <div className="text-sm text-amber-700 font-medium">Your Current Balance</div>
-          <div className="text-3xl font-black text-amber-600">
-            {data.currentCoins} 🪙
+        {/* Spin Wheel - centered */}
+        {state !== "result" && (
+          <div className="flex justify-center">
+            <SpinWheel 
+              onResult={handleSpinResult}
+              disabled={state !== "initial"}
+            />
           </div>
-        </div>
+        )}
 
-        {/* Risk/Reward Info */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-emerald-100 border-2 border-emerald-400 rounded-xl p-4 text-center">
-            <div className="text-emerald-700 text-sm font-bold mb-1">WIN (75%) 🍀</div>
-            <div className="text-2xl font-black text-emerald-600">
-              +{potentialGain} 🪙
+        {/* Result display */}
+        {state === "result" && spinResult !== null && (
+          <div className={`
+            text-center py-8 px-4 rounded-2xl animate-bounce-in
+            ${spinResult 
+              ? 'bg-gradient-to-b from-emerald-600/40 to-emerald-800/40 border-2 border-emerald-400' 
+              : 'bg-gradient-to-b from-red-600/40 to-red-800/40 border-2 border-red-400'
+            }
+          `}>
+            <div className="text-6xl mb-4">
+              {spinResult ? '🎉' : '😢'}
             </div>
-            <div className="text-xs text-emerald-600 mt-1 font-medium">Double up!</div>
-          </div>
-          <div className="bg-red-100 border-2 border-red-400 rounded-xl p-4 text-center">
-            <div className="text-red-700 text-sm font-bold mb-1">LOSE (25%) 😬</div>
-            <div className="text-2xl font-black text-red-600">
-              -{potentialLoss} 🪙
+            <div className={`text-3xl font-black mb-2 ${spinResult ? 'text-emerald-300' : 'text-red-300'}`}>
+              {spinResult ? 'YOU WIN!' : 'YOU LOSE!'}
             </div>
-            <div className="text-xs text-red-600 mt-1 font-medium">Lose half</div>
+            <div className={`text-xl font-bold ${spinResult ? 'text-emerald-400' : 'text-red-400'}`}>
+              {spinResult ? `+${potentialGain}` : `-${potentialLoss}`} 🪙
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Odds display */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-2 bg-emerald-100 border-2 border-emerald-400 rounded-full px-4 py-2">
-            <span className="text-xl">🍀</span>
-            <span className="text-emerald-700 font-bold">75% Win Rate!</span>
+        {/* Skip Button */}
+        {state === "initial" && (
+          <div className="text-center mt-4">
+            <button
+              onClick={handleSkip}
+              className="
+                px-8 py-3 rounded-xl font-bold text-sm 
+                bg-gray-800 border-2 border-gray-600 text-gray-400 
+                transition-all hover:bg-gray-700 hover:border-gray-500 hover:text-gray-200
+              "
+            >
+              Walk Away 🚶
+            </button>
           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            onClick={() => handleChoice(false)}
-            disabled={isSubmitting}
-            className={`
-              py-4 rounded-xl font-black text-lg bg-gray-200 border-2 border-gray-300 text-gray-600 
-              transition-all
-              ${isSubmitting ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-300"}
-            `}
-          >
-            {isSubmitting ? "..." : "Skip 🚶"}
-          </button>
-          <button
-            onClick={() => handleChoice(true)}
-            disabled={isSubmitting}
-            className={`
-              py-4 rounded-xl font-black text-lg bg-purple-500 border-2 border-purple-600 text-white 
-              transition-all shadow-playful
-              ${isSubmitting ? "opacity-50 cursor-not-allowed" : "hover:bg-purple-600 hover:-translate-y-0.5"}
-            `}
-          >
-            {isSubmitting ? "Rolling..." : "Gamble! 🎲"}
-          </button>
-        </div>
-
-        <p className="text-center text-xs text-purple-400 mt-4 font-medium">
-          "Feeling lucky today?" 🍀
-        </p>
+        )}
       </div>
     </div>
   )

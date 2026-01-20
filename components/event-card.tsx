@@ -57,7 +57,6 @@ function getTileEmoji(tileName: string): string {
 
 export function EventCard({ event, onDismiss }: EventCardProps) {
   const [isVisible, setIsVisible] = useState(false)
-  const [showCoins, setShowCoins] = useState(false)
   const onDismissRef = useRef(onDismiss)
   const eventIdRef = useRef<string | null>(null)
 
@@ -76,19 +75,16 @@ export function EventCard({ event, onDismiss }: EventCardProps) {
       eventIdRef.current = eventId
 
       setIsVisible(true)
-      setShowCoins(false)
 
       if (event.coinsDelta > 0) playChaChingSound()
       else if (event.coinsDelta < 0) playLoseMoneySound()
 
-      const coinTimer = setTimeout(() => setShowCoins(true), 300)
       const dismissTimer = setTimeout(() => {
         setIsVisible(false)
         setTimeout(() => onDismissRef.current(), 400)
       }, 4000)
 
       return () => {
-        clearTimeout(coinTimer)
         clearTimeout(dismissTimer)
       }
     } else {
@@ -144,15 +140,14 @@ export function EventCard({ event, onDismiss }: EventCardProps) {
           {/* Description */}
           <p className="text-gray-700 mb-5">{event.tileText}</p>
 
-          {/* Coin effect */}
+          {/* Coin effect - always show if non-zero */}
           {event.coinsDelta !== 0 && (
             <div
               className={`
-                inline-flex items-center gap-2 px-5 py-3 rounded-xl border-2
+                inline-flex items-center gap-2 px-5 py-3 rounded-xl border-2 animate-bounce-in
                 ${isPositive 
                   ? "bg-green-50 border-green-400" 
                   : "bg-red-50 border-red-400"}
-                ${showCoins ? "animate-bounce-in" : "opacity-0"}
               `}
             >
               <span className="text-2xl">🪙</span>

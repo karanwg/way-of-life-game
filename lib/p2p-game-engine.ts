@@ -588,9 +588,10 @@ export class P2PGameEngine {
 
   /**
    * Process Ponzi scheme choice
+   * @param spinResult - If provided, use this as the outcome (from spin wheel). Otherwise roll randomly.
    * @returns Result data or null if no pending ponzi
    */
-  processPonziChoice(playerId: string, invest: boolean): PonziResultData | null {
+  processPonziChoice(playerId: string, invest: boolean, spinResult?: boolean): PonziResultData | null {
     const pending = this.state.pendingPonzi
     if (!pending || pending.playerId !== playerId) {
       console.warn(`processPonziChoice: No pending ponzi for player ${playerId}`)
@@ -610,7 +611,8 @@ export class P2PGameEngine {
     }
 
     if (invest) {
-      const won = rollPonziOutcome() // 75% chance to win
+      // Use spin wheel result if provided, otherwise roll randomly
+      const won = spinResult !== undefined ? spinResult : rollPonziOutcome()
       
       if (won) {
         const gain = player.coins

@@ -149,7 +149,7 @@ export type GuestToHostMessage =
   | { type: "SUBMIT_ANSWER"; playerId: string; questionIndex: number; answerIndex: number }
   | { type: "NEXT_QUESTION"; playerId: string; wasCorrect: boolean }
   | { type: "HEIST_TARGET_SELECTED"; playerId: string; targetPlayerId: string }
-  | { type: "PONZI_CHOICE"; playerId: string; invest: boolean }
+  | { type: "PONZI_CHOICE"; playerId: string; invest: boolean; spinResult?: boolean }
   | { type: "POLICE_TARGET_SELECTED"; playerId: string; targetPlayerId: string }
   | { type: "SWAP_MEET_TARGET_SELECTED"; playerId: string; targetPlayerId: string }
   | { type: "LEAVE_GAME"; playerId: string }

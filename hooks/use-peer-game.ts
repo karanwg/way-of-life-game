@@ -872,11 +872,11 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
 
   /** Make a choice on the Ponzi/gamble tile */
   const makePonziChoice = useCallback(
-    (invest: boolean) => {
+    (invest: boolean, spinResult?: boolean) => {
       if (!myPlayerId) return
 
       if (roomState.role === "host" && gameEngineRef.current) {
-        const result = gameEngineRef.current.processPonziChoice(myPlayerId, invest)
+        const result = gameEngineRef.current.processPonziChoice(myPlayerId, invest, spinResult)
         if (result) {
           const allPlayers = gameEngineRef.current.getAllPlayers()
           broadcastToGuests({ type: "PONZI_RESULT", result, allPlayers })
@@ -901,7 +901,7 @@ export function usePeerGame(options: UsePeerGameOptions = {}) {
           options.onPonziResult?.({ playerId: myPlayerId, playerName: "You", invested: false })
         }
       } else {
-        sendToHost({ type: "PONZI_CHOICE", playerId: myPlayerId, invest })
+        sendToHost({ type: "PONZI_CHOICE", playerId: myPlayerId, invest, spinResult })
       }
     },
     [broadcastToGuests, myPlayerId, options, roomState.role, sendToHost, updateMyPlayer]

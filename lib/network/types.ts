@@ -88,7 +88,7 @@ export interface NetworkInterface {
   submitAnswer(questionIndex: number, answerIndex: number): void
   advanceQuestion(wasCorrect: boolean): Promise<MoveResultForNetwork>
   selectHeistTarget(targetId: string): void
-  makePonziChoice(invest: boolean): void
+  makePonziChoice(invest: boolean, spinResult?: boolean): void
   selectPoliceTarget(targetId: string): void
   
   // Host-only actions

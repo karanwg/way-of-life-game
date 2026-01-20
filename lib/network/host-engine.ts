@@ -135,7 +135,7 @@ export class HostEngine {
         break
       
       case "PONZI_CHOICE":
-        this.handlePonziChoice(message.playerId, message.invest)
+        this.handlePonziChoice(message.playerId, message.invest, message.spinResult)
         break
       
       case "POLICE_TARGET_SELECTED":
@@ -285,8 +285,8 @@ export class HostEngine {
     }
   }
 
-  private handlePonziChoice(playerId: string, invest: boolean) {
-    const result = this.engine.processPonziChoice(playerId, invest)
+  private handlePonziChoice(playerId: string, invest: boolean, spinResult?: boolean) {
+    const result = this.engine.processPonziChoice(playerId, invest, spinResult)
     const allPlayers = this.engine.getAllPlayers()
 
     if (result) {
@@ -493,9 +493,9 @@ export class HostEngine {
   }
 
   /** Make ponzi choice (host's own action) */
-  makePonziChoice(invest: boolean) {
+  makePonziChoice(invest: boolean, spinResult?: boolean) {
     if (!this.myPlayerId) return
-    this.handlePonziChoice(this.myPlayerId, invest)
+    this.handlePonziChoice(this.myPlayerId, invest, spinResult)
   }
 
   /** Select police target (host's own action) */
