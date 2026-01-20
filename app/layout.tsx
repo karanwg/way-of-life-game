@@ -8,7 +8,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "MCQ Quiz Game - Multiplayer Quiz Challenge",
+  title: "Way of Life",
   description: "Join multiplayer MCQ quiz game with real-time leaderboard and live scoring",
   generator: "v0.app",
   icons: {
