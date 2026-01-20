@@ -427,43 +427,6 @@ export function Board({ players, currentPlayerId, turnPhase = "idle", highlighte
           </div>
         </div>
       </div>
-
-      {/* Minimap in corner */}
-      <div
-        className="absolute bottom-4 right-4 w-32 h-32 bg-[#2e7d32] rounded-lg shadow-lg border-2 border-white/50 opacity-80"
-        style={{ transform: "rotateX(0deg)" }}
-      >
-        <div className="relative w-full h-full p-1">
-          {/* Simplified minimap tiles */}
-          {TILES.map((tile) => {
-            const layout = getTileLayout(tile.id)
-            const colors = getTileColors(tile.colorGroup)
-            const hasPlayer = players.some(p => p.currentTileId === tile.id)
-
-            return (
-              <div
-                key={tile.id}
-                className={`absolute ${colors.bg} ${hasPlayer ? 'ring-2 ring-white' : ''}`}
-                style={{
-                  left: `${layout.left}%`,
-                  top: `${layout.top}%`,
-                  width: `${layout.width}%`,
-                  height: `${layout.height}%`,
-                }}
-              />
-            )
-          })}
-          {/* Current player indicator */}
-          <div
-            className="absolute w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-lg"
-            style={{
-              left: `${getTileLayout(myCurrentTileId).centerX}%`,
-              top: `${getTileLayout(myCurrentTileId).centerY}%`,
-              transform: "translate(-50%, -50%)",
-            }}
-          />
-        </div>
-      </div>
     </div>
   )
 }
